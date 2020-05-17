@@ -6,10 +6,12 @@
   
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<meta name="description" content="One of the functions that that Yubikey can provide is the option to &amp;ldquo;store&amp;rdquo; a static password on the token which will be &amp;ldquo;typed&amp;rdquo; out on the host whenever you press the button. Having already done quite of a lot of work on the USB HID implementation, I was curious to know how Yubico had decided to emulate the keyboard functionality. Ultimately, I was hoping that I&amp;rsquo;d be able to set all kinds of different modifiers like Ctrl&#43;Alt&#43;Del and Super&#43;R to have a little more fun with it (BadUSB/Rubber Ducky style)."/>
-<meta name="keywords" content=""/>
-<meta name="robots" content="noodp"/>
+<meta name="description" content="One of the functions that that Yubikey can provide is the option to &amp;ldquo;store&amp;rdquo; a static password on the token which will be &amp;ldquo;typed&amp;rdquo; out on the host whenever you press the button. Having already done quite of a lot of work on the USB HID implementation, I was curious to know how Yubico had decided to emulate the keyboard functionality. Ultimately, I was hoping that I&amp;rsquo;d be able to set all kinds of different modifiers like Ctrl&#43;Alt&#43;Del and Super&#43;R to have a little more fun with it (BadUSB/Rubber Ducky style)." />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
 <link rel="canonical" href="/posts/yubikey/" />
+
+
 
 
 <link rel="stylesheet" href="/assets/style.css">
@@ -18,34 +20,39 @@
 
 
 
-<link rel="stylesheet" href="/style.css">
+
 
 
 <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/img/apple-touch-icon-144-precomposed.png">
 
-<link rel="shortcut icon" href="/img/favicon/blue.png">
+  <link rel="shortcut icon" href="/img/favicon/blue.png">
 
 
 
 <meta name="twitter:card" content="summary" />
-<meta name="twitter:title" content="Reversing Yubikey&#39;s Static Password :: Harvey Phillips — " />
-<meta name="twitter:description" content="One of the functions that that Yubikey can provide is the option to &amp;ldquo;store&amp;rdquo; a static password on the token which will be &amp;ldquo;typed&amp;rdquo; out on the host whenever you press the button. Having already done quite of a lot of work on the USB HID implementation, I was curious to know how Yubico had decided to emulate the keyboard functionality. Ultimately, I was hoping that I&amp;rsquo;d be able to set all kinds of different modifiers like Ctrl&#43;Alt&#43;Del and Super&#43;R to have a little more fun with it (BadUSB/Rubber Ducky style)." />
-<meta name="twitter:site" content="/" />
+
 <meta name="twitter:creator" content="" />
-<meta name="twitter:image" content="">
 
 
 <meta property="og:locale" content="en" />
 <meta property="og:type" content="article" />
-<meta property="og:title" content="Reversing Yubikey&#39;s Static Password :: Harvey Phillips — ">
+<meta property="og:title" content="Reversing Yubikey&#39;s Static Password :: Harvey Phillips">
 <meta property="og:description" content="One of the functions that that Yubikey can provide is the option to &amp;ldquo;store&amp;rdquo; a static password on the token which will be &amp;ldquo;typed&amp;rdquo; out on the host whenever you press the button. Having already done quite of a lot of work on the USB HID implementation, I was curious to know how Yubico had decided to emulate the keyboard functionality. Ultimately, I was hoping that I&amp;rsquo;d be able to set all kinds of different modifiers like Ctrl&#43;Alt&#43;Del and Super&#43;R to have a little more fun with it (BadUSB/Rubber Ducky style)." />
 <meta property="og:url" content="/posts/yubikey/" />
 <meta property="og:site_name" content="Reversing Yubikey&#39;s Static Password" />
-<meta property="og:image" content="">
+
+  
+    <meta property="og:image" content="/img/favicon/blue.png">
+  
+
 <meta property="og:image:width" content="2048">
 <meta property="og:image:height" content="1024">
-<meta property="article:section" content="reverse_engineering" />
-<meta property="article:published_time" content="2019-06-11 14:35:00 &#43;0100 BST" />
+
+  <meta property="article:section" content="reverse_engineering" />
+
+
+  <meta property="article:published_time" content="2019-06-11 14:35:00 &#43;0100 BST" />
+
 
 
 
@@ -61,7 +68,7 @@
 <body class="">
 
 
-<div class="container center">
+<div class="container center headings--one-size">
 
   <header class="header">
   <div class="header__inner">
@@ -94,6 +101,8 @@
       
       
     
+
+    
   </ul>
 
   <ul class="menu__inner menu__inner--mobile">
@@ -110,39 +119,11 @@
         <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
       
     
+    
   </ul>
 </nav>
 
   
-  <script type="text/javascript" async
-	  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-  MathJax.Hub.Config({
-	    tex2jax: {
-		        inlineMath: [['$','$'], ['\\(','\\)']],
-		        displayMath: [['$$','$$']],
-		        processEscapes: true,
-		        processEnvironments: true,
-		        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
-		        TeX: { equationNumbers: { autoNumber: "AMS" },
-				         extensions: ["AMSmath.js", "AMSsymbols.js"] }
-		      }
-	    });
-  MathJax.Hub.Queue(function() {
-	      
-	      
-	      
-	      var all = MathJax.Hub.getAllJax(), i;
-	      for(i = 0; i < all.length; i += 1) {
-	          all[i].SourceElement().parentNode.className += ' has-jax';
-	      }
-	    });
-
-	    MathJax.Hub.Config({
-	    
-	    TeX: { equationNumbers: { autoNumber: "AMS" } }
-	    });
-</script>
-
 </header>
 
 
@@ -152,9 +133,11 @@
   <h1 class="post-title">
     <a href="/posts/yubikey/">Reversing Yubikey&rsquo;s Static Password</a></h1>
   <div class="post-meta">
+      
     <span class="post-date">
       2019-06-11
     </span>
+    
     
   </div>
 
@@ -162,9 +145,9 @@
 
   
 
-  <div class="post-content">
-    <p>One of the functions that that Yubikey can provide is the option to &ldquo;store&rdquo; a static password on the token which will be &ldquo;typed&rdquo; out on the host whenever you press the button. Having already done <a href="https://github.com/xcellerator/usbninja">quite of a lot of work on the USB HID implementation</a>, I was curious to know how Yubico had decided to emulate the keyboard functionality. Ultimately, I was hoping that I&rsquo;d be able to set all kinds of different modifiers like Ctrl+Alt+Del and Super+R to have a little more fun with it (BadUSB/Rubber Ducky style).</p>
-<h1 id="a-look-at-the-source-code">A look at the source code</h1>
+  <div class="post-content"><div>
+        <p>One of the functions that that Yubikey can provide is the option to &ldquo;store&rdquo; a static password on the token which will be &ldquo;typed&rdquo; out on the host whenever you press the button. Having already done <a href="https://github.com/xcellerator/usbninja">quite of a lot of work on the USB HID implementation</a>, I was curious to know how Yubico had decided to emulate the keyboard functionality. Ultimately, I was hoping that I&rsquo;d be able to set all kinds of different modifiers like Ctrl+Alt+Del and Super+R to have a little more fun with it (BadUSB/Rubber Ducky style).</p>
+<h1 id="a-look-at-the-source-code">A look at the source code<a href="#a-look-at-the-source-code" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Luckily for us, the source for the Yubikey personalization tool has been <a href="https://github.com/Yubico/yubikey-personalization-gui/">open sourced</a> and is on their Github page. The main file of interest here is <a href="https://github.com/Yubico/yubikey-personalization-gui/blob/master/lib/us-scanedit.cpp">this</a> one. It defines what is basically a dictionary called <code>keyMap</code> in a function called <code>UsScanEdit()</code>.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#75715e">#define SHIFT = 0x80;
 </span><span style="color:#75715e"></span>
@@ -185,7 +168,7 @@ UsScanEdit<span style="color:#f92672">::</span>UsScanEdit() {
 }
 </code></pre></div><p>So, what&rsquo;s going on here? Well, the binary exploitation fans among you would probably have spotted that <code>A</code> is commented next to the <code>0x41</code> entry of the dictionary <code>keyMap</code>. For those who aren&rsquo;t aware, <code>0x41</code> is the ASCII for the uppercase letter <code>A</code> so we know that this is just a lookup table of keyboard characters. (In fact, it turns out at Yubico are using <code>Latin1</code> rather that ASCII as can be seen on line 57 <a href="https://github.com/Yubico/yubikey-personalization-gui/blob/master/lib/scanedit.cpp">here</a>, but it doesn&rsquo;t really make any difference).</p>
 <p>This is why most of <code>keyMap</code> is just set to <code>0</code> - they&rsquo;re all the ASCII characters that don&rsquo;t appear on a keyboard!</p>
-<h1 id="keyboard-scan-codes">Keyboard Scan Codes</h1>
+<h1 id="keyboard-scan-codes">Keyboard Scan Codes<a href="#keyboard-scan-codes" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>The question now is: if this is lookup table, what is it looking up? These are actually the keyboard &ldquo;scan codes&rdquo;. Taking a look at <a href="https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf">this beast of PDF</a> from the USB Foundation, all the way down on page 53, we get the table of all the scan codes listed under &ldquo;Usage ID (Hex)&rdquo; and their &ldquo;Usage Name&quot;s (or the names of the keys).</p>
 <table>
 <thead>
@@ -295,7 +278,7 @@ UsScanEdit<span style="color:#f92672">::</span>UsScanEdit() {
 </table>
 <p>You get the idea. What&rsquo;s important here is that every possible keypress corresponds to a two byte scan code which is what actually gets sent to the host to be interpreted as input. The Yubico personalization tool is taking our password as input, looking up each character&rsquo;s scan code and configuring the Yubikey to spit this string of bytes back at the host whenever the button is pressed.</p>
 <p>However, there&rsquo;s still one thing we haven&rsquo;t explained: modifiers. What happens if I want to send an input that requires <em>multiple keys to be pressed at once</em>, like a capital A (Shift+a) or Ctrl+r? It turns out that it&rsquo;s got something to do with the <code>#DEFINE SHIFT=0x80;</code> from the source code extract further back. To understand what&rsquo;s going on, we need to know a little bit about HID packets.</p>
-<h1 id="hid-packets">HID Packets</h1>
+<h1 id="hid-packets">HID Packets<a href="#hid-packets" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>If we restrict our attention to USB keyboards, then the HID protocol is surprisingly simple. Ignoring the USB layer stuff which initiates the connection by sending across a bunch of identifying information like VID/PIDs, serial numbers, etc (plug in a USB and check the output of <code>dmesg</code> to get an idea), let&rsquo;s assume that you&rsquo;ve plugged a USB keyboard into your computer and the correct drivers have been loaded.</p>
 <p>(Note for the curious:
 Part of the initialization involves sending across a HID descriptor along with all the other USB descriptors (like VID/PID). This HID descriptor lays out how it&rsquo;s packets should be interpreted by the host. It&rsquo;s not really important for our present discussion though as it&rsquo;s essentially just another <a href="https://github.com/xcellerator/usbninja/blob/70327416ba8d0fab69f67ae4b768252bff93645c/src/hid_payload.go#L32">hard-coded value</a>.)</p>
@@ -413,7 +396,10 @@ UsScanEdit<span style="color:#f92672">::</span>UsScanEdit() {
 </code></pre></div><p>Excusing my probably dodgy-looking C code, hopefully you get the idea as to what&rsquo;s going on. Unfortunately, all this means that it looks like there isn&rsquo;t a way to turn a Yubikey into a fully-fledged HID injection tool without rewriting the on-board firmware (which I&rsquo;m not aware of a way to do). All in all, I hit a bit of a brick wall, but perhaps this read will be useful for someone who is looking to the USB HID implementation. My (perhaps choppy) implementation in Go can be found on Github <a href="https://github.com/xcellerator/usbninja">here</a>.</p>
 <p>Until next time&hellip;</p>
 
-  </div>
+      </div></div>
+
+  
+  
   
 
   
@@ -426,8 +412,11 @@ UsScanEdit<span style="color:#f92672">::</span>UsScanEdit() {
     <footer class="footer">
   <div class="footer__inner">
     
-      <div class="copyright copyright--user">Harvey Phillips 2019 - London, England</div>
+      <div class="copyright copyright--user">
+        <span>Harvey Phillips 2019 - London, England</span>
     
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
   </div>
 </footer>
 

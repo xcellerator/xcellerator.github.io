@@ -7,10 +7,12 @@
   
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<meta name="description" content=""/>
-<meta name="keywords" content=""/>
-<meta name="robots" content="noodp"/>
+<meta name="description" content="" />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
 <link rel="canonical" href="/" />
+
+
 
 
 <link rel="stylesheet" href="/assets/style.css">
@@ -19,30 +21,31 @@
 
 
 
-<link rel="stylesheet" href="/style.css">
+
 
 
 <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/img/apple-touch-icon-144-precomposed.png">
 
-<link rel="shortcut icon" href="/img/favicon/blue.png">
+  <link rel="shortcut icon" href="/img/favicon/blue.png">
 
 
 
 <meta name="twitter:card" content="summary" />
-<meta name="twitter:title" content="Harvey Phillips — " />
-<meta name="twitter:description" content="" />
-<meta name="twitter:site" content="/" />
-<meta name="twitter:creator" content="" />
-<meta name="twitter:image" content="">
+
+<meta name="twitter:creator" content="TheXcellerator" />
 
 
 <meta property="og:locale" content="en" />
 <meta property="og:type" content="website" />
-<meta property="og:title" content="Harvey Phillips — ">
+<meta property="og:title" content="Harvey Phillips">
 <meta property="og:description" content="" />
 <meta property="og:url" content="/" />
 <meta property="og:site_name" content="Harvey Phillips" />
-<meta property="og:image" content="">
+
+  
+    <meta property="og:image" content="/img/favicon/blue.png">
+  
+
 <meta property="og:image:width" content="2048">
 <meta property="og:image:height" content="1024">
 
@@ -50,7 +53,7 @@
 
 
 
-<link href="/index.xml" rel="alternate" type="application/rss+xml" title="Harvey Phillips" />
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Harvey Phillips" />
 
 
 
@@ -64,7 +67,7 @@
 <body class="">
 
 
-<div class="container center">
+<div class="container center headings--one-size">
 
   <header class="header">
   <div class="header__inner">
@@ -97,6 +100,8 @@
       
       
     
+
+    
   </ul>
 
   <ul class="menu__inner menu__inner--mobile">
@@ -113,39 +118,11 @@
         <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
       
     
+    
   </ul>
 </nav>
 
   
-  <script type="text/javascript" async
-	  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-  MathJax.Hub.Config({
-	    tex2jax: {
-		        inlineMath: [['$','$'], ['\\(','\\)']],
-		        displayMath: [['$$','$$']],
-		        processEscapes: true,
-		        processEnvironments: true,
-		        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
-		        TeX: { equationNumbers: { autoNumber: "AMS" },
-				         extensions: ["AMSmath.js", "AMSsymbols.js"] }
-		      }
-	    });
-  MathJax.Hub.Queue(function() {
-	      
-	      
-	      
-	      var all = MathJax.Hub.getAllJax(), i;
-	      for(i = 0; i < all.length; i += 1) {
-	          all[i].SourceElement().parentNode.className += ' has-jax';
-	      }
-	    });
-
-	    MathJax.Hub.Config({
-	    
-	    TeX: { equationNumbers: { autoNumber: "AMS" } }
-	    });
-</script>
-
 </header>
 
 
@@ -154,12 +131,17 @@
 <div class="posts">
   
   
+
+  
+  
+    
+  
   
 
   
   <div class="post on-list">
     <h1 class="post-title">
-      <a href="/posts/">Posts</a></h1>
+      <a href="/posts/yubikey/">Reversing Yubikey&rsquo;s Static Password</a></h1>
     <div class="post-meta">
       <span class="post-date">
         2019-06-11
@@ -174,13 +156,15 @@
     <div class="post-content">
       
       
+      One of the functions that that Yubikey can provide is the option to “store” a static password on the token which will be “typed” out on the host whenever you press the button. Having already done quite of a lot of work on the USB HID implementation, I was curious to know how Yubico had decided to emulate the keyboard functionality. Ultimately, I was hoping that I’d be able to set all kinds of different modifiers like Ctrl+Alt+Del and Super+R to have a little more fun with it (BadUSB/Rubber Ducky style).
+      
       
     </div>
 
     
     <div>
       <a class="read-more button"
-        href="/posts/">Read more →</a>
+        href="/posts/yubikey/">Read more →</a>
     </div>
     
   </div>
@@ -200,8 +184,11 @@
     <footer class="footer">
   <div class="footer__inner">
     
-      <div class="copyright copyright--user">Harvey Phillips 2019 - London, England</div>
+      <div class="copyright copyright--user">
+        <span>Harvey Phillips 2019 - London, England</span>
     
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
   </div>
 </footer>
 
