@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on Harvey Phillips</title>
+    <link>/posts/</link>
+    <description>Recent content in Posts on Harvey Phillips</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-gb</language>
+    <copyright>Harvey Phillips 2019 - London, England</copyright>
+    <lastBuildDate>Tue, 11 Jun 2019 14:35:00 +0100</lastBuildDate>
+    
+	<atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Reversing Yubikey&#39;s Static Password</title>
+      <link>/posts/yubikey/</link>
+      <pubDate>Tue, 11 Jun 2019 14:35:00 +0100</pubDate>
+      
+      <guid>/posts/yubikey/</guid>
+      <description>One of the functions that that Yubikey can provide is the option to &amp;ldquo;store&amp;rdquo; a static password on the token which will be &amp;ldquo;typed&amp;rdquo; out on the host whenever you press the button. Having already done quite of a lot of work on the USB HID implementation, I was curious to know how Yubico had decided to emulate the keyboard functionality. Ultimately, I was hoping that I&amp;rsquo;d be able to set all kinds of different modifiers like Ctrl+Alt+Del and Super+R to have a little more fun with it (BadUSB/Rubber Ducky style).</description>
+    </item>
+    
+  </channel>
+</rss>
