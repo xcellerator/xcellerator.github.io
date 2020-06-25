@@ -1,16 +1,26 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>reverse_engineering on Harvey Phillips</title>
+    <title>reverse_engineering on TheXcellerator</title>
     <link>/categories/reverse_engineering/</link>
-    <description>Recent content in reverse_engineering on Harvey Phillips</description>
+    <description>Recent content in reverse_engineering on TheXcellerator</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <copyright>Harvey Phillips 2019 - London, England</copyright>
-    <lastBuildDate>Tue, 11 Jun 2019 14:35:00 +0100</lastBuildDate>
+    <copyright>Harvey Phillips 2020 - London, England</copyright>
+    <lastBuildDate>Tue, 23 Jun 2020 20:37:00 +0100</lastBuildDate>
     
 	<atom:link href="/categories/reverse_engineering/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>BootNoodle: A Palindromic Bootloader for BGGP</title>
+      <link>/posts/bggp/</link>
+      <pubDate>Tue, 23 Jun 2020 20:37:00 +0100</pubDate>
+      
+      <guid>/posts/bggp/</guid>
+      <description>A few days ago (as of writing), @netspooky announced the first (hopefully annual!) Binary Golf Grand Prix on Twitter. The objective was to create a binary of any sort that is the same forwards as it is byte-reversed, but with an emphasis on creating as small a binary as possible, hence golfing.
+This was one of those challenges where I thought that I had no chance of even creating a qualifying submission, so it&amp;rsquo;s better to just wait for the results and admire the work of everyone else.</description>
+    </item>
     
     <item>
       <title>Reversing Yubikey&#39;s Static Password</title>

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Categories on Harvey Phillips</title>
+    <title>Categories on TheXcellerator</title>
     <link>/categories/</link>
-    <description>Recent content in Categories on Harvey Phillips</description>
+    <description>Recent content in Categories on TheXcellerator</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <copyright>Harvey Phillips 2019 - London, England</copyright>
-    <lastBuildDate>Tue, 11 Jun 2019 14:35:00 +0100</lastBuildDate>
+    <copyright>Harvey Phillips 2020 - London, England</copyright>
+    <lastBuildDate>Tue, 23 Jun 2020 20:37:00 +0100</lastBuildDate>
     
 	<atom:link href="/categories/index.xml" rel="self" type="application/rss+xml" />
     
@@ -15,7 +15,7 @@
     <item>
       <title>reverse_engineering</title>
       <link>/categories/reverse_engineering/</link>
-      <pubDate>Tue, 11 Jun 2019 14:35:00 +0100</pubDate>
+      <pubDate>Tue, 23 Jun 2020 20:37:00 +0100</pubDate>
       
       <guid>/categories/reverse_engineering/</guid>
       <description></description>
