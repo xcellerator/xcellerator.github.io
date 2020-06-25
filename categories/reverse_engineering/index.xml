@@ -18,7 +18,8 @@
       <pubDate>Tue, 23 Jun 2020 20:37:00 +0100</pubDate>
       
       <guid>/posts/bggp/</guid>
-      <description>A few days ago (as of writing), @netspooky announced the first (hopefully annual!) Binary Golf Grand Prix on Twitter. The objective was to create a binary of any sort that is the same forwards as it is byte-reversed, but with an emphasis on creating as small a binary as possible, hence golfing.
+      <description>You can find the git repo with the finished submission here: BootNoodle
+ A few days ago (as of writing), @netspooky announced the first (hopefully annual!) Binary Golf Grand Prix on Twitter. The objective was to create a binary of any sort that is the same forwards as it is byte-reversed, but with an emphasis on creating as small a binary as possible, hence golfing.
 This was one of those challenges where I thought that I had no chance of even creating a qualifying submission, so it&amp;rsquo;s better to just wait for the results and admire the work of everyone else.</description>
     </item>
     

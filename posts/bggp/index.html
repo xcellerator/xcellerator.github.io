@@ -6,7 +6,8 @@
   
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<meta name="description" content="A few days ago (as of writing), @netspooky announced the first (hopefully annual!) Binary Golf Grand Prix on Twitter. The objective was to create a binary of any sort that is the same forwards as it is byte-reversed, but with an emphasis on creating as small a binary as possible, hence golfing.
+<meta name="description" content="You can find the git repo with the finished submission here: BootNoodle
+ A few days ago (as of writing), @netspooky announced the first (hopefully annual!) Binary Golf Grand Prix on Twitter. The objective was to create a binary of any sort that is the same forwards as it is byte-reversed, but with an emphasis on creating as small a binary as possible, hence golfing.
 This was one of those challenges where I thought that I had no chance of even creating a qualifying submission, so it&amp;rsquo;s better to just wait for the results and admire the work of everyone else." />
 <meta name="keywords" content="" />
 <meta name="robots" content="noodp" />
@@ -38,7 +39,8 @@ This was one of those challenges where I thought that I had no chance of even cr
 <meta property="og:locale" content="en" />
 <meta property="og:type" content="article" />
 <meta property="og:title" content="BootNoodle: A Palindromic Bootloader for BGGP :: TheXcellerator">
-<meta property="og:description" content="A few days ago (as of writing), @netspooky announced the first (hopefully annual!) Binary Golf Grand Prix on Twitter. The objective was to create a binary of any sort that is the same forwards as it is byte-reversed, but with an emphasis on creating as small a binary as possible, hence golfing.
+<meta property="og:description" content="You can find the git repo with the finished submission here: BootNoodle
+ A few days ago (as of writing), @netspooky announced the first (hopefully annual!) Binary Golf Grand Prix on Twitter. The objective was to create a binary of any sort that is the same forwards as it is byte-reversed, but with an emphasis on creating as small a binary as possible, hence golfing.
 This was one of those challenges where I thought that I had no chance of even creating a qualifying submission, so it&amp;rsquo;s better to just wait for the results and admire the work of everyone else." />
 <meta property="og:url" content="/posts/bggp/" />
 <meta property="og:site_name" content="BootNoodle: A Palindromic Bootloader for BGGP" />
@@ -148,7 +150,10 @@ This was one of those challenges where I thought that I had no chance of even cr
   
 
   <div class="post-content"><div>
-        <p>A few days ago (as of writing), <a href="https://twitter.com/netspooky">@netspooky</a> announced the first (hopefully annual!) <a href="http://n0.lol/bggp/">Binary Golf Grand Prix</a> on <a href="https://twitter.com/netspooky/status/1275256864314470402">Twitter</a>. The objective was to create a binary of any sort that is the same forwards as it is byte-reversed, but with an emphasis on creating as <em>small a binary as possible</em>, hence <em>golfing</em>.</p>
+        <blockquote>
+<p>You can find the git repo with the finished submission here: <a href="https://github.com/xcellerator/bootnoodle">BootNoodle</a></p>
+</blockquote>
+<p>A few days ago (as of writing), <a href="https://twitter.com/netspooky">@netspooky</a> announced the first (hopefully annual!) <a href="http://n0.lol/bggp/">Binary Golf Grand Prix</a> on <a href="https://twitter.com/netspooky/status/1275256864314470402">Twitter</a>. The objective was to create a binary of any sort that is the same forwards as it is byte-reversed, but with an emphasis on creating as <em>small a binary as possible</em>, hence <em>golfing</em>.</p>
 <p>This was one of those challenges where I thought that I had no chance of even creating a qualifying submission, so it&rsquo;s better to just wait for the results and admire the work of everyone else. However, I did start thinking about how it would even be possible to create such a binary (netspooky already pointed out that COM files and like don&rsquo;t count for fairly obvious reasons).</p>
 <p>I decided that if I was going to attempt something like this, I&rsquo;d have to first settle on a file format. In the end, I think I took the easy option and chose to create a <em>palindromic x86 bootloader</em>. The main reasons for this were that bootloaders are essentially format-<em>less</em> - the only requirement for a valid bootloader is bytes <code>511</code> and <code>512</code> are <code>0x55</code> and <code>0xaa</code> respectively - the rest of it is just raw x86 instructions. That brings us to the second reason: technically (as far as I am aware) the absolute minimum size of an x86 bootloader is 512 bytes. This felt like a bit of a double-edged sword - just enough space to do something interesting, but still fairly limited - especially given that it has to read the same backwards!</p>
 <h1 id="workflow">Workflow<a href="#workflow" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
