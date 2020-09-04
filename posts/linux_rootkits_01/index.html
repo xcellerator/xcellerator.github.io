@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>Linux Rootkits Part 1: Introduction and Worflow :: TheXcellerator</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="description" content="Learning about Linux rootkits is a great way to learn more about how the kernel works. What&amp;rsquo;s great about it is that, unless you really understand what the kernel is doing, your rootkit is unlikely to work, so it serves as a fantasic verifier.
+In the FreeBSD world, Joseph Kong&amp;rsquo;s amazing book Designing BSD Rootkits exists. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD." />
+<meta name="keywords" content=", " />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="/posts/linux_rootkits_01/" />
+
+
+
+
+<link rel="stylesheet" href="/assets/style.css">
+
+  <link rel="stylesheet" href="/assets/blue.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/img/apple-touch-icon-144-precomposed.png">
+
+  <link rel="shortcut icon" href="/img/favicon/blue.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+<meta name="twitter:creator" content="TheXcellerator" />
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Linux Rootkits Part 1: Introduction and Worflow :: TheXcellerator">
+<meta property="og:description" content="Learning about Linux rootkits is a great way to learn more about how the kernel works. What&amp;rsquo;s great about it is that, unless you really understand what the kernel is doing, your rootkit is unlikely to work, so it serves as a fantasic verifier.
+In the FreeBSD world, Joseph Kong&amp;rsquo;s amazing book Designing BSD Rootkits exists. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD." />
+<meta property="og:url" content="/posts/linux_rootkits_01/" />
+<meta property="og:site_name" content="Linux Rootkits Part 1: Introduction and Worflow" />
+
+  
+    <meta property="og:image" content="/img/favicon/blue.png">
+  
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+  <meta property="article:section" content="linux" />
+
+
+  <meta property="article:published_time" content="2020-08-25 21:00:00 &#43;0100 BST" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="">
+
+
+<div class="container center headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    TheXcellerator
+  </div>
+</a>
+
+    </div>
+    <div class="menu-trigger">menu</div>
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/categories/cryptography/">Cryptography</a></li>
+        
+      
+        
+          <li><a href="/categories/linux/">Linux</a></li>
+        
+      
+        
+          <li><a href="/categories/other/">Other</a></li>
+        
+      
+        
+          <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/categories/cryptography/">Cryptography</a></li>
+      
+    
+      
+        <li><a href="/categories/linux/">Linux</a></li>
+      
+    
+      
+        <li><a href="/categories/other/">Other</a></li>
+      
+    
+      
+        <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="/posts/linux_rootkits_01/">Linux Rootkits Part 1: Introduction and Worflow</a></h1>
+  <div class="post-meta">
+      
+    <span class="post-date">
+      2020-08-25
+    </span>
+    
+    
+    <span class="post-author">::
+      TheXcellerator
+    </span>
+    
+  </div>
+
+  
+  <span class="post-tags">
+    
+    #<a href="/tags/linux/">linux</a>&nbsp;
+    
+    #<a href="/tags/rootkit/">rootkit</a>&nbsp;
+    
+  </span>
+  
+
+  
+
+  <div class="post-content"><div>
+        <p>Learning about Linux rootkits is a great way to learn more about how the kernel works. What&rsquo;s great about it is that, unless you really understand what the kernel is doing, your rootkit is unlikely to work, so it serves as a fantasic verifier.</p>
+<p>In the FreeBSD world, Joseph Kong&rsquo;s amazing book <a href="https://nostarch.com/rootkits.htm">Designing BSD Rootkits</a> exists. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD. This learning experience was invaluable in learning about kernel rootkits, but sadly the Linux kernel isn&rsquo;t quite as open and carefree as the FreeBSD kernel is. The basic idea of using <em>kernel modules</em> to get running code into the kernel is same though and is the focus of these blog posts.</p>
+<p>When I tried to apply what I&rsquo;d learnt about FreeBSD to Linux, I found quite a shortage of resources and had to put a lot of different things together from many different sources. These blog posts serve to hopefully set out what I&rsquo;ve learnt about Linux kernel rootkit design for anyone else hoping to learn more about how the kernel works!</p>
+<p>The idea is that I&rsquo;ll start off with what a kernel rootkit is and the workflow I used during development. Next, I&rsquo;ll describe the main technique involved in hooking different kernel functions - <a href="https://www.kernel.org/doc/html/latest/trace/ftrace.html">Ftrace</a> (it&rsquo;s easier than it looks - don&rsquo;t worry!). Once that&rsquo;s out of the way, I&rsquo;ll get into the actual techniques that kernel rootkits use: hiding directories, ports and processes from the user, granting root permissions and even hiding the rootkit&rsquo;s presence altogether.</p>
+<h1 id="what-is-a-kernel-mode-rootkit">What is a Kernel Mode Rootkit?<a href="#what-is-a-kernel-mode-rootkit" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>So, what does a kernel rootkit actually <em>do</em>? Well, <a href="https://en.wikipedia.org/wiki/Rootkit">Wikipedia</a> defines a rootkit as:</p>
+<blockquote>
+<p>&ldquo;A rootkit is a collection of computer software, typically malicious, designed to enable access to a computer or an area of its software that is not otherwise allowed (for example, to an unauthorized user) and often masks its existence or the existence of other software.&rdquo;</p>
+</blockquote>
+<p>And of course, being a <em>kernel</em> rootkit means that the code we write will run with kernel level privileges (ring 0) via the kernel modules that we will write. This can be a double-edged sword: what we do is invisible to the user and userspace tools, but if we mess something up, we are likely to crash the system because the kernel can&rsquo;t save us from itself! This makes development in a VM a pretty hard requirement - fortunately we&rsquo;ll be using <a href="https://www.vagrantup.com/">Vagrant</a> to keep the headaches to a minimum.</p>
+<p>At a very high level, the main technique in kernel rootkits (and userspace rookits too, but that&rsquo;s another article) is <em>function hooking</em>. Essentially, we take a function in memory that performs some action we want to influence (listing directory contents, sending a signal to a process, etc) and write our own version. Part of this process involves saving a copy of the original function that we can still implement the normal functionality without having to rewrite it. Then we have to find a way to &ldquo;inject&rdquo; our new function into the kernel in such a way that the kernel will continue to function &ldquo;normally&rdquo; (aka without any outward signs to the user that something is up - like crashing!).</p>
+<p>As you might imagine, being Linux, there is always more than one way to skin a cat, and function hooking is no exception. The method that I am going to focus on (as mentioned above) is called <a href="https://www.kernel.org/doc/html/latest/trace/ftrace.html">Ftrace</a>, and is the main subject of the <a href="../linux_rootkits_02/">next blog post</a>.</p>
+<h1 id="workflow-for-rootkit-development">Workflow for Rootkit Development<a href="#workflow-for-rootkit-development" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>That&rsquo;s all well and good, but before we can go on to learning about the precise ways of modifying kernel memory and how to write hook functions, we need to get our workflow sorted.</p>
+<p>As mentioned, the first thing we need is a VM. You&rsquo;re free to use VirtualBox or something else your comfortable with, but during this process I discovered <a href="https://www.vagrantup.com/">Vagrant</a>. If you&rsquo;ve already got VirtualBox installed, then Vagrant will automatically use it for virtualization without any configuration needed.</p>
+<p>Vagrant uses the current directory to store the configuration for the current VM. If you need another VM, create a new directory and run vagrant again! To give you an idea of how easy vagrant is:</p>
+<pre><code>vagrant init generic/ubuntu2004
+vagrant up
+vagrant ssh
+</code></pre><p>And with that, I&rsquo;m looking at a bash prompt in an Ubuntu 20.04 VM! Then <code>vagrant upload ~/.ssh</code> and <code>vagrant upload ~/.vimrc</code> makes our lives easier down the line.</p>
+<p>Either way, once you&rsquo;re in your VM, you&rsquo;re gonna need a few things. I&rsquo;m going to base this tutorial on Ubuntu 20.04 (if you don&rsquo;t use Ubuntu then I&rsquo;m sure you can figure out the changes to make). Make sure your system is fully updated (including any kernel updates!), then go for the usual <code>apt install git build-essential linux-headers-$(uname -r)</code> (git is optional, but highly recommended!). Once that&rsquo;s done, we can look at building a simple kernel module.</p>
+<h1 id="building-kernel-modules">Building Kernel Modules<a href="#building-kernel-modules" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Let&rsquo;s look at the following C code (it&rsquo;s a good idea to get this into a file because we are going to build it soon!).</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/init.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/module.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/kernel.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+MODULE_LICENSE(<span style="color:#e6db74">&#34;GPL&#34;</span>);
+MODULE_AUTHOR(<span style="color:#e6db74">&#34;TheXcellerator&#34;</span>);
+MODULE_DESCRIPTION(<span style="color:#e6db74">&#34;Basic Kernel Module&#34;</span>);
+MODULE_VERSION(<span style="color:#e6db74">&#34;0.01&#34;</span>);
+
+<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> __init <span style="color:#a6e22e">example_init</span>(<span style="color:#66d9ef">void</span>)
+{
+    printk(KERN_INFO <span style="color:#e6db74">&#34;Hello, world!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+}
+
+<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> __exit <span style="color:#a6e22e">example_exit</span>(<span style="color:#66d9ef">void</span>)
+{
+    printk(KERN_INFO <span style="color:#e6db74">&#34;Goodbye, world!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+}
+
+module_init(example_init);
+module_exit(example_exit);
+</code></pre></div><p>This is about as simple as a kernel module can be - and we&rsquo;re going to go through it line-by-line.</p>
+<p>First off, we have a couple of <code>#include</code>'s that will always be required, followed up by a few macros that bake in some details about the what the module does. This information is made availabe by the kernel when we load the module into memory later on.</p>
+<p>Next we have two very important functions that will <em>always be present</em>. The <code>example_init</code> function is executed once the module is loaded, and <code>example_exit</code> when it is unloaded. The final two lines declare to the compiler the roles that <code>example_init</code> and <code>example_exit</code> have. (You can name these two functions whatever you want as long as you keep <code>__init</code> and <code>__exit</code> in their declarations and change those final two lines).</p>
+<p>All these functions do (for now!) is <code>printk()</code> a string to the kernel buffer (which you see the contents of using <code>dmesg</code>). This <code>printk()</code> function is a lot like the more familiar <code>printf()</code>, except we <em>always</em> start with a <code>KERN_*</code> macro which defines the log level of the message (see <a href="https://elinux.org/Debugging_by_printing#Log_Levels">here</a> for all the possible log levels). We&rsquo;ll pretty much always use either <code>KERN_INFO</code> or <code>KERN_DEBUG</code>. Observe that this macro does <em>not</em> belong in quotes like the rest of the string! We are also welcome to use format strings in <code>printk()</code> just like in <code>printf()</code> which will be our main method of pulling data out of the kernel when we&rsquo;re debugging.</p>
+<p>Okay, so that&rsquo;s pretty simple, right? But how do we compile it? We use the following Makefile:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-makefile" data-lang="makefile">obj-m <span style="color:#f92672">+=</span> example.o
+
+<span style="color:#a6e22e">all</span><span style="color:#f92672">:</span>
+    make -C /lib/modules/<span style="color:#66d9ef">$(</span>shell uname -r<span style="color:#66d9ef">)</span>/build M<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>PWD<span style="color:#66d9ef">)</span> modules
+
+<span style="color:#a6e22e">clean</span><span style="color:#f92672">:</span>
+    make -C /lib/modules/<span style="color:#66d9ef">$(</span>shell uname -r<span style="color:#66d9ef">)</span>/build M<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>PWD<span style="color:#66d9ef">)</span> clean
+</code></pre></div><p>Assuming you&rsquo;ve named the C source <code>example.c</code> (otherwise change <code>example.o</code> on the top line to whatever else you&rsquo;ve called it), then simply running <code>make</code> will give you a bunch of new intermediate binaries, but most importantly you&rsquo;ll have a shiny new <code>example.ko</code> in there.</p>
+<p>This <code>example.ko</code> is your freshly built kernel module (the <code>.ko</code> is for <em>kernel object</em>)! To load it into your running kernel (<em>please</em>, always do this on a VM until you&rsquo;re certain everything works properly!), simply run <code># insmod example.ko</code>. Now, if you check <code>dmesg</code>, you should see a &ldquo;Hello, world!&rdquo; line! To remove the kernel module, just run <code># rmmod example</code> (note that there&rsquo;s no <code>.ko</code> when we unload a module), and you&rsquo;ll see the goodbye message appear in the kernel buffer.</p>
+<blockquote>
+<p>You can find the source code for all this and more on my GitHub repo <a href="https://github.com/xcellerator/linux_kernel_hacking">xcellerator/linux_kernel_hacking</a>. Specifically, this basic module is <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/0_Basic_LKMs/0.0_Basic">here</a>.</p>
+</blockquote>
+<p>Congratulations! You just built and loaded your first Linux kernel module! Ofcourse, it didn&rsquo;t actually do much, but that&rsquo;s what the next few blog posts are going to do. The plan for next time is to introduce Ftrace, which is the tool we&rsquo;re going to use to hook kernel functions.</p>
+<blockquote>
+<p>Anytime you build a Linux kernel module, it is specific to <em>the kernel version it was built on</em>. If you try to take a module and load it on a system with a different kernel, it will very likely faily to load.</p>
+</blockquote>
+<p>Now head on over to <a href="../linux_rootkits_02">Part 2</a>!</p>
+<p>Until next time&hellip;</p>
+
+      </div></div>
+
+  
+  
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        <span class="button previous">
+            <a href="/posts/linux_rootkits_02/">
+                <span class="button__icon">←</span>
+                <span class="button__text">Linux Rootkits Part 2: Ftrace and Function Hooking</span>
+            </a>
+        </span>
+        
+        
+        <span class="button next">
+            <a href="/posts/bggp/">
+                <span class="button__text">BootNoodle: A Palindromic Bootloader for BGGP</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright copyright--user">
+        <span>Harvey Phillips 2020 - London, England</span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="/assets/main.js"></script>
+<script src="/assets/prism.js"></script>
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>

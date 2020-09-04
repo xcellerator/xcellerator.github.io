@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Posts on TheXcellerator</title>
-    <link>/posts/</link>
-    <description>Recent content in Posts on TheXcellerator</description>
+    <title>linux on TheXcellerator</title>
+    <link>/categories/linux/</link>
+    <description>Recent content in linux on TheXcellerator</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
     <lastBuildDate>Wed, 26 Aug 2020 21:00:00 +0100</lastBuildDate>
     
-	<atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="/categories/linux/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
@@ -30,26 +30,6 @@ Luckily for us, there is already a great list of potential targets: syscalls! Sy
       <guid>/posts/linux_rootkits_01/</guid>
       <description>Learning about Linux rootkits is a great way to learn more about how the kernel works. What&amp;rsquo;s great about it is that, unless you really understand what the kernel is doing, your rootkit is unlikely to work, so it serves as a fantasic verifier.
 In the FreeBSD world, Joseph Kong&amp;rsquo;s amazing book Designing BSD Rootkits exists. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD.</description>
-    </item>
-    
-    <item>
-      <title>BootNoodle: A Palindromic Bootloader for BGGP</title>
-      <link>/posts/bggp/</link>
-      <pubDate>Tue, 23 Jun 2020 20:37:00 +0100</pubDate>
-      
-      <guid>/posts/bggp/</guid>
-      <description>You can find the git repo with the finished submission here: BootNoodle
- A few days ago (as of writing), @netspooky announced the first (hopefully annual!) Binary Golf Grand Prix on Twitter. The objective was to create a binary of any sort that is the same forwards as it is byte-reversed, but with an emphasis on creating as small a binary as possible, hence golfing.
-This was one of those challenges where I thought that I had no chance of even creating a qualifying submission, so it&amp;rsquo;s better to just wait for the results and admire the work of everyone else.</description>
-    </item>
-    
-    <item>
-      <title>Reversing Yubikey&#39;s Static Password</title>
-      <link>/posts/yubikey/</link>
-      <pubDate>Tue, 11 Jun 2019 14:35:00 +0100</pubDate>
-      
-      <guid>/posts/yubikey/</guid>
-      <description>One of the functions that that Yubikey can provide is the option to &amp;ldquo;store&amp;rdquo; a static password on the token which will be &amp;ldquo;typed&amp;rdquo; out on the host whenever you press the button. Having already done quite of a lot of work on the USB HID implementation, I was curious to know how Yubico had decided to emulate the keyboard functionality. Ultimately, I was hoping that I&amp;rsquo;d be able to set all kinds of different modifiers like Ctrl+Alt+Del and Super+R to have a little more fun with it (BadUSB/Rubber Ducky style).</description>
     </item>
     
   </channel>

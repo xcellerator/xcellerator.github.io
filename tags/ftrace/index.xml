@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>ftrace on TheXcellerator</title>
+    <link>/tags/ftrace/</link>
+    <description>Recent content in ftrace on TheXcellerator</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>Harvey Phillips 2020 - London, England</copyright>
+    <lastBuildDate>Wed, 26 Aug 2020 21:00:00 +0100</lastBuildDate>
+    
+	<atom:link href="/tags/ftrace/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Linux Rootkits Part 2: Ftrace and Function Hooking</title>
+      <link>/posts/linux_rootkits_02/</link>
+      <pubDate>Wed, 26 Aug 2020 21:00:00 +0100</pubDate>
+      
+      <guid>/posts/linux_rootkits_02/</guid>
+      <description>Okay, so you&amp;rsquo;ve built your first kernel module, but now you want to make it do something cool - something like altering the behaviour of the running kernel. The way we do this is by function hooking, but the question is - how do we know which functions to hook?
+Luckily for us, there is already a great list of potential targets: syscalls! Syscalls (or system calls) are kernel functions that can be called from userspace, and are required for almost anything remotely interesting.</description>
+    </item>
+    
+  </channel>
+</rss>

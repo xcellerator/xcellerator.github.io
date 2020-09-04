@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta name="generator" content="Hugo 0.72.0" />
+	<meta name="generator" content="Hugo 0.74.3" />
   
     <title>TheXcellerator</title>
   
@@ -91,6 +91,10 @@
         
       
         
+          <li><a href="/categories/linux/">Linux</a></li>
+        
+      
+        
           <li><a href="/categories/other/">Other</a></li>
         
       
@@ -108,6 +112,10 @@
     
       
         <li><a href="/categories/cryptography/">Cryptography</a></li>
+      
+    
+      
+        <li><a href="/categories/linux/">Linux</a></li>
       
     
       
@@ -141,6 +149,88 @@
   
   <div class="post on-list">
     <h1 class="post-title">
+      <a href="/posts/linux_rootkits_02/">Linux Rootkits Part 2: Ftrace and Function Hooking</a></h1>
+    <div class="post-meta">
+      <span class="post-date">
+        2020-08-26
+      </span>
+      <span class="post-author">::
+        TheXcellerator</span>
+    </div>
+
+    
+    <span class="post-tags">
+      
+      #<a href="/tags/linux/">linux</a>&nbsp;
+      
+      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
+      
+      #<a href="/tags/ftrace/">ftrace</a>&nbsp;
+      
+    </span>
+    
+
+    
+
+    <div class="post-content">
+      
+      
+      Okay, so you’ve built your first kernel module, but now you want to make it do something cool - something like altering the behaviour of the running kernel. The way we do this is by function hooking, but the question is - how do we know which functions to hook?
+Luckily for us, there is already a great list of potential targets: syscalls! Syscalls (or system calls) are kernel functions that can be called from userspace, and are required for almost anything remotely interesting.
+      
+      
+    </div>
+
+    
+    <div>
+      <a class="read-more button"
+        href="/posts/linux_rootkits_02/">Read more →</a>
+    </div>
+    
+  </div>
+  
+  <div class="post on-list">
+    <h1 class="post-title">
+      <a href="/posts/linux_rootkits_01/">Linux Rootkits Part 1: Introduction and Worflow</a></h1>
+    <div class="post-meta">
+      <span class="post-date">
+        2020-08-25
+      </span>
+      <span class="post-author">::
+        TheXcellerator</span>
+    </div>
+
+    
+    <span class="post-tags">
+      
+      #<a href="/tags/linux/">linux</a>&nbsp;
+      
+      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
+      
+    </span>
+    
+
+    
+
+    <div class="post-content">
+      
+      
+      Learning about Linux rootkits is a great way to learn more about how the kernel works. What’s great about it is that, unless you really understand what the kernel is doing, your rootkit is unlikely to work, so it serves as a fantasic verifier.
+In the FreeBSD world, Joseph Kong’s amazing book Designing BSD Rootkits exists. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD.
+      
+      
+    </div>
+
+    
+    <div>
+      <a class="read-more button"
+        href="/posts/linux_rootkits_01/">Read more →</a>
+    </div>
+    
+  </div>
+  
+  <div class="post on-list">
+    <h1 class="post-title">
       <a href="/posts/bggp/">BootNoodle: A Palindromic Bootloader for BGGP</a></h1>
     <div class="post-meta">
       <span class="post-date">
@@ -171,39 +261,16 @@ This was one of those challenges where I thought that I had no chance of even cr
     
   </div>
   
-  <div class="post on-list">
-    <h1 class="post-title">
-      <a href="/posts/yubikey/">Reversing Yubikey&rsquo;s Static Password</a></h1>
-    <div class="post-meta">
-      <span class="post-date">
-        2019-06-11
-      </span>
-      
-    </div>
-
-    
-
-    
-
-    <div class="post-content">
-      
-      
-      One of the functions that that Yubikey can provide is the option to “store” a static password on the token which will be “typed” out on the host whenever you press the button. Having already done quite of a lot of work on the USB HID implementation, I was curious to know how Yubico had decided to emulate the keyboard functionality. Ultimately, I was hoping that I’d be able to set all kinds of different modifiers like Ctrl+Alt+Del and Super+R to have a little more fun with it (BadUSB/Rubber Ducky style).
-      
-      
-    </div>
-
-    
-    <div>
-      <a class="read-more button"
-        href="/posts/yubikey/">Read more →</a>
-    </div>
-    
-  </div>
-  
   <div class="pagination">
   <div class="pagination__buttons">
     
+    
+      <span class="button next">
+        <a href="/page/2/">
+          <span class="button__text">Older posts</span>
+          <span class="button__icon">→</span>
+        </a>
+      </span>
     
   </div>
 </div>

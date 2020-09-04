@@ -7,10 +7,30 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Tue, 23 Jun 2020 20:37:00 +0100</lastBuildDate>
+    <lastBuildDate>Wed, 26 Aug 2020 21:00:00 +0100</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Linux Rootkits Part 2: Ftrace and Function Hooking</title>
+      <link>/posts/linux_rootkits_02/</link>
+      <pubDate>Wed, 26 Aug 2020 21:00:00 +0100</pubDate>
+      
+      <guid>/posts/linux_rootkits_02/</guid>
+      <description>Okay, so you&amp;rsquo;ve built your first kernel module, but now you want to make it do something cool - something like altering the behaviour of the running kernel. The way we do this is by function hooking, but the question is - how do we know which functions to hook?
+Luckily for us, there is already a great list of potential targets: syscalls! Syscalls (or system calls) are kernel functions that can be called from userspace, and are required for almost anything remotely interesting.</description>
+    </item>
+    
+    <item>
+      <title>Linux Rootkits Part 1: Introduction and Worflow</title>
+      <link>/posts/linux_rootkits_01/</link>
+      <pubDate>Tue, 25 Aug 2020 21:00:00 +0100</pubDate>
+      
+      <guid>/posts/linux_rootkits_01/</guid>
+      <description>Learning about Linux rootkits is a great way to learn more about how the kernel works. What&amp;rsquo;s great about it is that, unless you really understand what the kernel is doing, your rootkit is unlikely to work, so it serves as a fantasic verifier.
+In the FreeBSD world, Joseph Kong&amp;rsquo;s amazing book Designing BSD Rootkits exists. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD.</description>
+    </item>
     
     <item>
       <title>BootNoodle: A Palindromic Bootloader for BGGP</title>
