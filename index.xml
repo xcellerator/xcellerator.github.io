@@ -7,10 +7,20 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Wed, 26 Aug 2020 21:00:00 +0100</lastBuildDate>
+    <lastBuildDate>Sat, 29 Aug 2020 21:00:00 +0100</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Linux Rootkits Part 3: A Backdoor to Root</title>
+      <link>/posts/linux_rootkits_03/</link>
+      <pubDate>Sat, 29 Aug 2020 21:00:00 +0100</pubDate>
+      
+      <guid>/posts/linux_rootkits_03/</guid>
+      <description>Now that you know how to make a Linux kernel module that can hook any exposed function in kernel memory (Part 1 and Part 2), let&amp;rsquo;s get down to writing a hook that does something interesting!
+In this first example, we&amp;rsquo;re going to make a rootkit that intercepts calls to sys_kill. 99% of the time, we only use sys_kill (the userspace tool we normally use is the familiar kill) to kill a process, i.</description>
+    </item>
     
     <item>
       <title>Linux Rootkits Part 2: Ftrace and Function Hooking</title>

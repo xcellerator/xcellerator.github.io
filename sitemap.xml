@@ -3,8 +3,53 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>/tags/backdoor/</loc>
+    <lastmod>2020-08-29T21:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/categories/</loc>
-    <lastmod>2020-08-26T21:00:00+01:00</lastmod>
+    <lastmod>2020-08-29T21:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/linux/</loc>
+    <lastmod>2020-08-29T21:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/categories/linux/</loc>
+    <lastmod>2020-08-29T21:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/posts/linux_rootkits_03/</loc>
+    <lastmod>2020-08-29T21:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/posts/</loc>
+    <lastmod>2020-08-29T21:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/root/</loc>
+    <lastmod>2020-08-29T21:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/rootkit/</loc>
+    <lastmod>2020-08-29T21:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/</loc>
+    <lastmod>2020-08-29T21:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/</loc>
+    <lastmod>2020-08-29T21:00:00+01:00</lastmod>
   </url>
   
   <url>
@@ -13,37 +58,7 @@
   </url>
   
   <url>
-    <loc>/tags/linux/</loc>
-    <lastmod>2020-08-26T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/categories/linux/</loc>
-    <lastmod>2020-08-26T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
     <loc>/posts/linux_rootkits_02/</loc>
-    <lastmod>2020-08-26T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/posts/</loc>
-    <lastmod>2020-08-26T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/rootkit/</loc>
-    <lastmod>2020-08-26T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/</loc>
-    <lastmod>2020-08-26T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/</loc>
     <lastmod>2020-08-26T21:00:00+01:00</lastmod>
   </url>
   
