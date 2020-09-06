@@ -22,6 +22,24 @@
     </item>
     
     <item>
+      <title>cryptography</title>
+      <link>/categories/cryptography/</link>
+      <pubDate>Tue, 25 Aug 2020 21:00:00 +0100</pubDate>
+      
+      <guid>/categories/cryptography/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>other</title>
+      <link>/categories/other/</link>
+      <pubDate>Tue, 25 Aug 2020 21:00:00 +0100</pubDate>
+      
+      <guid>/categories/other/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>reverse_engineering</title>
       <link>/categories/reverse_engineering/</link>
       <pubDate>Tue, 23 Jun 2020 20:37:00 +0100</pubDate>

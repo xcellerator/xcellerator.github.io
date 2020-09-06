@@ -63,7 +63,22 @@
   </url>
   
   <url>
+    <loc>/posts/check_back_soon/</loc>
+    <lastmod>2020-08-25T21:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/categories/cryptography/</loc>
+    <lastmod>2020-08-25T21:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/posts/linux_rootkits_01/</loc>
+    <lastmod>2020-08-25T21:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/categories/other/</loc>
     <lastmod>2020-08-25T21:00:00+01:00</lastmod>
   </url>
   
