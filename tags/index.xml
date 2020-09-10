@@ -7,10 +7,64 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Sat, 29 Aug 2020 21:00:00 +0100</lastBuildDate>
+    <lastBuildDate>Wed, 09 Sep 2020 21:00:00 +0100</lastBuildDate>
     
 	<atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>char</title>
+      <link>/tags/char/</link>
+      <pubDate>Wed, 09 Sep 2020 21:00:00 +0100</pubDate>
+      
+      <guid>/tags/char/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>device</title>
+      <link>/tags/device/</link>
+      <pubDate>Wed, 09 Sep 2020 21:00:00 +0100</pubDate>
+      
+      <guid>/tags/device/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>linux</title>
+      <link>/tags/linux/</link>
+      <pubDate>Wed, 09 Sep 2020 21:00:00 +0100</pubDate>
+      
+      <guid>/tags/linux/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>random</title>
+      <link>/tags/random/</link>
+      <pubDate>Wed, 09 Sep 2020 21:00:00 +0100</pubDate>
+      
+      <guid>/tags/random/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>rootkit</title>
+      <link>/tags/rootkit/</link>
+      <pubDate>Wed, 09 Sep 2020 21:00:00 +0100</pubDate>
+      
+      <guid>/tags/rootkit/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>urandom</title>
+      <link>/tags/urandom/</link>
+      <pubDate>Wed, 09 Sep 2020 21:00:00 +0100</pubDate>
+      
+      <guid>/tags/urandom/</guid>
+      <description></description>
+    </item>
     
     <item>
       <title>backdoor</title>
@@ -22,29 +76,11 @@
     </item>
     
     <item>
-      <title>linux</title>
-      <link>/tags/linux/</link>
-      <pubDate>Sat, 29 Aug 2020 21:00:00 +0100</pubDate>
-      
-      <guid>/tags/linux/</guid>
-      <description></description>
-    </item>
-    
-    <item>
       <title>root</title>
       <link>/tags/root/</link>
       <pubDate>Sat, 29 Aug 2020 21:00:00 +0100</pubDate>
       
       <guid>/tags/root/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>rootkit</title>
-      <link>/tags/rootkit/</link>
-      <pubDate>Sat, 29 Aug 2020 21:00:00 +0100</pubDate>
-      
-      <guid>/tags/rootkit/</guid>
       <description></description>
     </item>
     

@@ -7,26 +7,26 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Sat, 29 Aug 2020 21:00:00 +0100</lastBuildDate>
+    <lastBuildDate>Wed, 09 Sep 2020 21:00:00 +0100</lastBuildDate>
     
 	<atom:link href="/categories/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
-      <title>linux</title>
-      <link>/categories/linux/</link>
-      <pubDate>Sat, 29 Aug 2020 21:00:00 +0100</pubDate>
+      <title>cryptography</title>
+      <link>/categories/cryptography/</link>
+      <pubDate>Wed, 09 Sep 2020 21:00:00 +0100</pubDate>
       
-      <guid>/categories/linux/</guid>
+      <guid>/categories/cryptography/</guid>
       <description></description>
     </item>
     
     <item>
-      <title>cryptography</title>
-      <link>/categories/cryptography/</link>
-      <pubDate>Tue, 25 Aug 2020 21:00:00 +0100</pubDate>
+      <title>linux</title>
+      <link>/categories/linux/</link>
+      <pubDate>Wed, 09 Sep 2020 21:00:00 +0100</pubDate>
       
-      <guid>/categories/cryptography/</guid>
+      <guid>/categories/linux/</guid>
       <description></description>
     </item>
     

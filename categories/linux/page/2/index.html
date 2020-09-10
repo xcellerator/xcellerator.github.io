@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
   
-    <title>cryptography :: TheXcellerator</title>
+    <title>linux :: TheXcellerator</title>
   
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <meta name="description" content="" />
 <meta name="keywords" content="" />
 <meta name="robots" content="noodp" />
-<link rel="canonical" href="/categories/cryptography/" />
+<link rel="canonical" href="/categories/linux/" />
 
 
 
@@ -36,10 +36,10 @@
 
 <meta property="og:locale" content="en" />
 <meta property="og:type" content="website" />
-<meta property="og:title" content="cryptography :: TheXcellerator">
+<meta property="og:title" content="linux :: TheXcellerator">
 <meta property="og:description" content="" />
-<meta property="og:url" content="/categories/cryptography/" />
-<meta property="og:site_name" content="cryptography" />
+<meta property="og:url" content="/categories/linux/" />
+<meta property="og:site_name" content="linux" />
 
   
     <meta property="og:image" content="/img/favicon/blue.png">
@@ -52,7 +52,7 @@
 
 
 
-  <link href="/categories/cryptography/index.xml" rel="alternate" type="application/rss+xml" title="TheXcellerator" />
+  <link href="/categories/linux/index.xml" rel="alternate" type="application/rss+xml" title="TheXcellerator" />
 
 
 
@@ -146,10 +146,10 @@
   
   <div class="post on-list">
     <h1 class="post-title">
-      <a href="/posts/linux_rootkits_04/">Linux Rootkits Part 4: Backdooring PRNGs by Interfering with Char Devices</a></h1>
+      <a href="/posts/linux_rootkits_01/">Linux Rootkits Part 1: Introduction and Worflow</a></h1>
     <div class="post-meta">
       <span class="post-date">
-        2020-09-09
+        2020-08-25
       </span>
       <span class="post-author">::
         TheXcellerator</span>
@@ -162,14 +162,6 @@
       
       #<a href="/tags/rootkit/">rootkit</a>&nbsp;
       
-      #<a href="/tags/char/">char</a>&nbsp;
-      
-      #<a href="/tags/device/">device</a>&nbsp;
-      
-      #<a href="/tags/random/">random</a>&nbsp;
-      
-      #<a href="/tags/urandom/">urandom</a>&nbsp;
-      
     </span>
     
 
@@ -178,8 +170,8 @@
     <div class="post-content">
       
       
-      We saw in Part 3 how easy it is to add some extra functionality to a syscall. This time we’re going to target a pair of kernel functions that are not syscalls, and can’t be called directly. To understand what these are, it’s worth discussing char devices a little first.
-Char Devices in Linux Although you might not recognise the name, you’re probably already pretty familiar with a bunch of char (or chararacter) devices already.
+      Learning about Linux rootkits is a great way to learn more about how the kernel works. What’s great about it is that, unless you really understand what the kernel is doing, your rootkit is unlikely to work, so it serves as a fantasic verifier.
+In the FreeBSD world, Joseph Kong’s amazing book Designing BSD Rootkits exists. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD.
       
       
     </div>
@@ -187,13 +179,20 @@ Char Devices in Linux Although you might not recognise the name, you’re probab
     
     <div>
       <a class="read-more button"
-        href="/posts/linux_rootkits_04/">Read more →</a>
+        href="/posts/linux_rootkits_01/">Read more →</a>
     </div>
     
   </div>
   
   <div class="pagination">
   <div class="pagination__buttons">
+    
+      <span class="button previous">
+        <a href="/categories/linux/">
+          <span class="button__icon">←</span>
+          <span class="button__text">Newer posts</span>
+        </a>
+      </span>
     
     
   </div>

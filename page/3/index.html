@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+	<meta name="generator" content="Hugo 0.74.3" />
   
-    <title>cryptography :: TheXcellerator</title>
+    <title>TheXcellerator</title>
   
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <meta name="description" content="" />
 <meta name="keywords" content="" />
 <meta name="robots" content="noodp" />
-<link rel="canonical" href="/categories/cryptography/" />
+<link rel="canonical" href="/" />
 
 
 
@@ -31,15 +32,15 @@
 
 <meta name="twitter:card" content="summary" />
 
-<meta name="twitter:creator" content="" />
+<meta name="twitter:creator" content="TheXcellerator" />
 
 
 <meta property="og:locale" content="en" />
 <meta property="og:type" content="website" />
-<meta property="og:title" content="cryptography :: TheXcellerator">
+<meta property="og:title" content="TheXcellerator">
 <meta property="og:description" content="" />
-<meta property="og:url" content="/categories/cryptography/" />
-<meta property="og:site_name" content="cryptography" />
+<meta property="og:url" content="/" />
+<meta property="og:site_name" content="TheXcellerator" />
 
   
     <meta property="og:image" content="/img/favicon/blue.png">
@@ -52,7 +53,7 @@
 
 
 
-  <link href="/categories/cryptography/index.xml" rel="alternate" type="application/rss+xml" title="TheXcellerator" />
+  <link href="/index.xml" rel="alternate" type="application/rss+xml" title="TheXcellerator" />
 
 
 
@@ -141,36 +142,21 @@
 
   
   
+    
+  
   
 
   
   <div class="post on-list">
     <h1 class="post-title">
-      <a href="/posts/linux_rootkits_04/">Linux Rootkits Part 4: Backdooring PRNGs by Interfering with Char Devices</a></h1>
+      <a href="/posts/yubikey/">Reversing Yubikey&rsquo;s Static Password</a></h1>
     <div class="post-meta">
       <span class="post-date">
-        2020-09-09
+        2019-06-11
       </span>
-      <span class="post-author">::
-        TheXcellerator</span>
+      
     </div>
 
-    
-    <span class="post-tags">
-      
-      #<a href="/tags/linux/">linux</a>&nbsp;
-      
-      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
-      
-      #<a href="/tags/char/">char</a>&nbsp;
-      
-      #<a href="/tags/device/">device</a>&nbsp;
-      
-      #<a href="/tags/random/">random</a>&nbsp;
-      
-      #<a href="/tags/urandom/">urandom</a>&nbsp;
-      
-    </span>
     
 
     
@@ -178,8 +164,7 @@
     <div class="post-content">
       
       
-      We saw in Part 3 how easy it is to add some extra functionality to a syscall. This time we’re going to target a pair of kernel functions that are not syscalls, and can’t be called directly. To understand what these are, it’s worth discussing char devices a little first.
-Char Devices in Linux Although you might not recognise the name, you’re probably already pretty familiar with a bunch of char (or chararacter) devices already.
+      One of the functions that that Yubikey can provide is the option to “store” a static password on the token which will be “typed” out on the host whenever you press the button. Having already done quite of a lot of work on the USB HID implementation, I was curious to know how Yubico had decided to emulate the keyboard functionality. Ultimately, I was hoping that I’d be able to set all kinds of different modifiers like Ctrl+Alt+Del and Super+R to have a little more fun with it (BadUSB/Rubber Ducky style).
       
       
     </div>
@@ -187,13 +172,20 @@ Char Devices in Linux Although you might not recognise the name, you’re probab
     
     <div>
       <a class="read-more button"
-        href="/posts/linux_rootkits_04/">Read more →</a>
+        href="/posts/yubikey/">Read more →</a>
     </div>
     
   </div>
   
   <div class="pagination">
   <div class="pagination__buttons">
+    
+      <span class="button previous">
+        <a href="/page/2/">
+          <span class="button__icon">←</span>
+          <span class="button__text">Newer posts</span>
+        </a>
+      </span>
     
     
   </div>

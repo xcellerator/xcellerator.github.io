@@ -7,10 +7,20 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Sat, 29 Aug 2020 21:00:00 +0100</lastBuildDate>
+    <lastBuildDate>Wed, 09 Sep 2020 21:00:00 +0100</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Linux Rootkits Part 4: Backdooring PRNGs by Interfering with Char Devices</title>
+      <link>/posts/linux_rootkits_04/</link>
+      <pubDate>Wed, 09 Sep 2020 21:00:00 +0100</pubDate>
+      
+      <guid>/posts/linux_rootkits_04/</guid>
+      <description>We saw in Part 3 how easy it is to add some extra functionality to a syscall. This time we&amp;rsquo;re going to target a pair of kernel functions that are not syscalls, and can&amp;rsquo;t be called directly. To understand what these are, it&amp;rsquo;s worth discussing char devices a little first.
+Char Devices in Linux Although you might not recognise the name, you&amp;rsquo;re probably already pretty familiar with a bunch of char (or chararacter) devices already.</description>
+    </item>
     
     <item>
       <title>Linux Rootkits Part 3: A Backdoor to Root</title>

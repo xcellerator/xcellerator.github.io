@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>cryptography on TheXcellerator</title>
-    <link>/categories/cryptography/</link>
-    <description>Recent content in cryptography on TheXcellerator</description>
+    <title>urandom on TheXcellerator</title>
+    <link>/tags/urandom/</link>
+    <description>Recent content in urandom on TheXcellerator</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
     <lastBuildDate>Wed, 09 Sep 2020 21:00:00 +0100</lastBuildDate>
     
-	<atom:link href="/categories/cryptography/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="/tags/urandom/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>

