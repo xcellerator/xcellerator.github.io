@@ -7,7 +7,7 @@
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <meta name="description" content="Learning about Linux rootkits is a great way to learn more about how the kernel works. What&amp;rsquo;s great about it is that, unless you really understand what the kernel is doing, your rootkit is unlikely to work, so it serves as a fantasic verifier.
-In the FreeBSD world, Joseph Kong&amp;rsquo;s amazing book Designing BSD Rootkits exists. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD." />
+In the FreeBSD world, you can find Joseph Kong&amp;rsquo;s amazing book Designing BSD Rootkits. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD." />
 <meta name="keywords" content=", " />
 <meta name="robots" content="noodp" />
 <link rel="canonical" href="/posts/linux_rootkits_01/" />
@@ -39,7 +39,7 @@ In the FreeBSD world, Joseph Kong&amp;rsquo;s amazing book Designing BSD Rootkit
 <meta property="og:type" content="article" />
 <meta property="og:title" content="Linux Rootkits Part 1: Introduction and Worflow :: TheXcellerator">
 <meta property="og:description" content="Learning about Linux rootkits is a great way to learn more about how the kernel works. What&amp;rsquo;s great about it is that, unless you really understand what the kernel is doing, your rootkit is unlikely to work, so it serves as a fantasic verifier.
-In the FreeBSD world, Joseph Kong&amp;rsquo;s amazing book Designing BSD Rootkits exists. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD." />
+In the FreeBSD world, you can find Joseph Kong&amp;rsquo;s amazing book Designing BSD Rootkits. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD." />
 <meta property="og:url" content="/posts/linux_rootkits_01/" />
 <meta property="og:site_name" content="Linux Rootkits Part 1: Introduction and Worflow" />
 
@@ -169,7 +169,7 @@ In the FreeBSD world, Joseph Kong&amp;rsquo;s amazing book Designing BSD Rootkit
 
   <div class="post-content"><div>
         <p>Learning about Linux rootkits is a great way to learn more about how the kernel works. What&rsquo;s great about it is that, unless you really understand what the kernel is doing, your rootkit is unlikely to work, so it serves as a fantasic verifier.</p>
-<p>In the FreeBSD world, Joseph Kong&rsquo;s amazing book <a href="https://nostarch.com/rootkits.htm">Designing BSD Rootkits</a> exists. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD. This learning experience was invaluable in learning about kernel rootkits, but sadly the Linux kernel isn&rsquo;t quite as open and carefree as the FreeBSD kernel is. The basic idea of using <em>kernel modules</em> to get running code into the kernel is same though and is the focus of these blog posts.</p>
+<p>In the FreeBSD world, you can find Joseph Kong&rsquo;s amazing book <a href="https://nostarch.com/rootkits.htm">Designing BSD Rootkits</a>. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD. This learning experience was invaluable in learning about kernel rootkits, but sadly the Linux kernel isn&rsquo;t quite as open and carefree as the FreeBSD kernel is. The basic idea of using <em>kernel modules</em> to get running code into the kernel is same though and is the focus of these blog posts.</p>
 <p>When I tried to apply what I&rsquo;d learnt about FreeBSD to Linux, I found quite a shortage of resources and had to put a lot of different things together from many different sources. These blog posts serve to hopefully set out what I&rsquo;ve learnt about Linux kernel rootkit design for anyone else hoping to learn more about how the kernel works!</p>
 <p>The idea is that I&rsquo;ll start off with what a kernel rootkit is and the workflow I used during development. Next, I&rsquo;ll describe the main technique involved in hooking different kernel functions - <a href="https://www.kernel.org/doc/html/latest/trace/ftrace.html">Ftrace</a> (it&rsquo;s easier than it looks - don&rsquo;t worry!). Once that&rsquo;s out of the way, I&rsquo;ll get into the actual techniques that kernel rootkits use: hiding directories, ports and processes from the user, granting root permissions and even hiding the rootkit&rsquo;s presence altogether.</p>
 <h1 id="what-is-a-kernel-mode-rootkit">What is a Kernel Mode Rootkit?<a href="#what-is-a-kernel-mode-rootkit" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
@@ -188,7 +188,7 @@ In the FreeBSD world, Joseph Kong&amp;rsquo;s amazing book Designing BSD Rootkit
 vagrant up
 vagrant ssh
 </code></pre><p>And with that, I&rsquo;m looking at a bash prompt in an Ubuntu 20.04 VM! Then <code>vagrant upload ~/.ssh</code> and <code>vagrant upload ~/.vimrc</code> makes our lives easier down the line.</p>
-<p>Either way, once you&rsquo;re in your VM, you&rsquo;re gonna need a few things. I&rsquo;m going to base this tutorial on Ubuntu 20.04 (if you don&rsquo;t use Ubuntu then I&rsquo;m sure you can figure out the changes to make). Make sure your system is fully updated (including any kernel updates!), then go for the usual <code>apt install git build-essential linux-headers-$(uname -r)</code> (git is optional, but highly recommended!). Once that&rsquo;s done, we can look at building a simple kernel module.</p>
+<p>Either way, once you&rsquo;re in your VM, you&rsquo;re gonna need a few things. I&rsquo;m going to base this tutorial on Ubuntu 20.04 (if you don&rsquo;t use Ubuntu then I&rsquo;m sure you can figure out the changes to make). Make sure your system is fully updated (including any kernel updates!), then go for the usual <code>apt update; apt install git build-essential linux-headers-$(uname -r)</code> (git is optional, but highly recommended!). Once that&rsquo;s done, we can look at building a simple kernel module.</p>
 <h1 id="building-kernel-modules">Building Kernel Modules<a href="#building-kernel-modules" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Let&rsquo;s look at the following C code (it&rsquo;s a good idea to get this into a file because we are going to build it soon!).</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/init.h&gt;</span><span style="color:#75715e">

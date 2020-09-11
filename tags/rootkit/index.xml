@@ -49,7 +49,7 @@ Luckily for us, there is already a great list of potential targets: syscalls! Sy
       
       <guid>/posts/linux_rootkits_01/</guid>
       <description>Learning about Linux rootkits is a great way to learn more about how the kernel works. What&amp;rsquo;s great about it is that, unless you really understand what the kernel is doing, your rootkit is unlikely to work, so it serves as a fantasic verifier.
-In the FreeBSD world, Joseph Kong&amp;rsquo;s amazing book Designing BSD Rootkits exists. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD.</description>
+In the FreeBSD world, you can find Joseph Kong&amp;rsquo;s amazing book Designing BSD Rootkits. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD.</description>
     </item>
     
   </channel>
