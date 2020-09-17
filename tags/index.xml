@@ -7,10 +7,42 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Wed, 09 Sep 2020 21:00:00 +0100</lastBuildDate>
+    <lastBuildDate>Thu, 17 Sep 2020 19:00:00 +0100</lastBuildDate><atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>linked lists</title>
+      <link>/tags/linked-lists/</link>
+      <pubDate>Thu, 17 Sep 2020 19:00:00 +0100</pubDate>
+      
+      <guid>/tags/linked-lists/</guid>
+      <description></description>
+    </item>
     
-	<atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>linux</title>
+      <link>/tags/linux/</link>
+      <pubDate>Thu, 17 Sep 2020 19:00:00 +0100</pubDate>
+      
+      <guid>/tags/linux/</guid>
+      <description></description>
+    </item>
     
+    <item>
+      <title>rootkit</title>
+      <link>/tags/rootkit/</link>
+      <pubDate>Thu, 17 Sep 2020 19:00:00 +0100</pubDate>
+      
+      <guid>/tags/rootkit/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>stealth</title>
+      <link>/tags/stealth/</link>
+      <pubDate>Thu, 17 Sep 2020 19:00:00 +0100</pubDate>
+      
+      <guid>/tags/stealth/</guid>
+      <description></description>
+    </item>
     
     <item>
       <title>char</title>
@@ -31,29 +63,11 @@
     </item>
     
     <item>
-      <title>linux</title>
-      <link>/tags/linux/</link>
-      <pubDate>Wed, 09 Sep 2020 21:00:00 +0100</pubDate>
-      
-      <guid>/tags/linux/</guid>
-      <description></description>
-    </item>
-    
-    <item>
       <title>random</title>
       <link>/tags/random/</link>
       <pubDate>Wed, 09 Sep 2020 21:00:00 +0100</pubDate>
       
       <guid>/tags/random/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>rootkit</title>
-      <link>/tags/rootkit/</link>
-      <pubDate>Wed, 09 Sep 2020 21:00:00 +0100</pubDate>
-      
-      <guid>/tags/rootkit/</guid>
       <description></description>
     </item>
     

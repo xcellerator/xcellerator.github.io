@@ -7,10 +7,16 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Wed, 09 Sep 2020 21:00:00 +0100</lastBuildDate>
-    
-	<atom:link href="/tags/linux/index.xml" rel="self" type="application/rss+xml" />
-    
+    <lastBuildDate>Thu, 17 Sep 2020 19:00:00 +0100</lastBuildDate><atom:link href="/tags/linux/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Linux Rootkits Part 5: Hiding Kernel Modules from Userspace</title>
+      <link>/posts/linux_rootkits_05/</link>
+      <pubDate>Thu, 17 Sep 2020 19:00:00 +0100</pubDate>
+      
+      <guid>/posts/linux_rootkits_05/</guid>
+      <description>So far, we&amp;rsquo;ve seen how hooking both syscalls and regular functions can be put to good use. But, seeing as how this is a series on rootkits, we should really be making some considerations on stealth. If you&amp;rsquo;ve been following along, then once you&amp;rsquo;d loaded any of the previous rootkits, it&amp;rsquo;s presence would have been revealed by simply examining the output of lsmod.
+$ lsmod | grep rootkit rootkit 16384 0 Pretty obvious, right?</description>
+    </item>
     
     <item>
       <title>Linux Rootkits Part 4: Backdooring PRNGs by Interfering with Char Devices</title>
