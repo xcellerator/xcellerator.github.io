@@ -4,7 +4,52 @@
   
   <url>
     <loc>/categories/</loc>
-    <lastmod>2020-09-17T19:00:00+01:00</lastmod>
+    <lastmod>2020-09-19T19:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/directories/</loc>
+    <lastmod>2020-09-19T19:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/linux/</loc>
+    <lastmod>2020-09-19T19:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/categories/linux/</loc>
+    <lastmod>2020-09-19T19:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/posts/linux_rootkits_06/</loc>
+    <lastmod>2020-09-19T19:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/posts/</loc>
+    <lastmod>2020-09-19T19:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/rootkit/</loc>
+    <lastmod>2020-09-19T19:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/stealth/</loc>
+    <lastmod>2020-09-19T19:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/</loc>
+    <lastmod>2020-09-19T19:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/</loc>
+    <lastmod>2020-09-19T19:00:00+01:00</lastmod>
   </url>
   
   <url>
@@ -13,42 +58,7 @@
   </url>
   
   <url>
-    <loc>/tags/linux/</loc>
-    <lastmod>2020-09-17T19:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/categories/linux/</loc>
-    <lastmod>2020-09-17T19:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
     <loc>/posts/linux_rootkits_05/</loc>
-    <lastmod>2020-09-17T19:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/posts/</loc>
-    <lastmod>2020-09-17T19:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/rootkit/</loc>
-    <lastmod>2020-09-17T19:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/stealth/</loc>
-    <lastmod>2020-09-17T19:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/</loc>
-    <lastmod>2020-09-17T19:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/</loc>
     <lastmod>2020-09-17T19:00:00+01:00</lastmod>
   </url>
   

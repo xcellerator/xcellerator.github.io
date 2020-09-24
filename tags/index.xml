@@ -7,20 +7,20 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Thu, 17 Sep 2020 19:00:00 +0100</lastBuildDate><atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 19 Sep 2020 19:00:00 +0100</lastBuildDate><atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>linked lists</title>
-      <link>/tags/linked-lists/</link>
-      <pubDate>Thu, 17 Sep 2020 19:00:00 +0100</pubDate>
+      <title>directories</title>
+      <link>/tags/directories/</link>
+      <pubDate>Sat, 19 Sep 2020 19:00:00 +0100</pubDate>
       
-      <guid>/tags/linked-lists/</guid>
+      <guid>/tags/directories/</guid>
       <description></description>
     </item>
     
     <item>
       <title>linux</title>
       <link>/tags/linux/</link>
-      <pubDate>Thu, 17 Sep 2020 19:00:00 +0100</pubDate>
+      <pubDate>Sat, 19 Sep 2020 19:00:00 +0100</pubDate>
       
       <guid>/tags/linux/</guid>
       <description></description>
@@ -29,7 +29,7 @@
     <item>
       <title>rootkit</title>
       <link>/tags/rootkit/</link>
-      <pubDate>Thu, 17 Sep 2020 19:00:00 +0100</pubDate>
+      <pubDate>Sat, 19 Sep 2020 19:00:00 +0100</pubDate>
       
       <guid>/tags/rootkit/</guid>
       <description></description>
@@ -38,9 +38,18 @@
     <item>
       <title>stealth</title>
       <link>/tags/stealth/</link>
-      <pubDate>Thu, 17 Sep 2020 19:00:00 +0100</pubDate>
+      <pubDate>Sat, 19 Sep 2020 19:00:00 +0100</pubDate>
       
       <guid>/tags/stealth/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>linked lists</title>
+      <link>/tags/linked-lists/</link>
+      <pubDate>Thu, 17 Sep 2020 19:00:00 +0100</pubDate>
+      
+      <guid>/tags/linked-lists/</guid>
       <description></description>
     </item>
     

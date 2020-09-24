@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>stealth on TheXcellerator</title>
-    <link>/tags/stealth/</link>
-    <description>Recent content in stealth on TheXcellerator</description>
+    <title>directories on TheXcellerator</title>
+    <link>/tags/directories/</link>
+    <description>Recent content in directories on TheXcellerator</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Sat, 19 Sep 2020 19:00:00 +0100</lastBuildDate><atom:link href="/tags/stealth/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 19 Sep 2020 19:00:00 +0100</lastBuildDate><atom:link href="/tags/directories/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Linux Rootkits Part 6: Hiding Directories</title>
       <link>/posts/linux_rootkits_06/</link>
@@ -16,16 +16,6 @@
       <guid>/posts/linux_rootkits_06/</guid>
       <description>At this point, we&amp;rsquo;ve used several different techniques to manipulate the kernel into doing interesting things. We&amp;rsquo;re going to combine a few of these techniques now in order to hide certain files and directories from userspace. This post is probably the most intricate yet due to the fact that we have to manipulate the structure returned by the kernel to userspace.
 Roughly speaking, directory listing is handled by the syscall sys_getdents64 and its 32-bit counterpart sys_getdents (we&amp;rsquo;ll want to hook both, but they are identical except for a small addition in the 32-bit version).</description>
-    </item>
-    
-    <item>
-      <title>Linux Rootkits Part 5: Hiding Kernel Modules from Userspace</title>
-      <link>/posts/linux_rootkits_05/</link>
-      <pubDate>Thu, 17 Sep 2020 19:00:00 +0100</pubDate>
-      
-      <guid>/posts/linux_rootkits_05/</guid>
-      <description>So far, we&amp;rsquo;ve seen how hooking both syscalls and regular functions can be put to good use. But, seeing as how this is a series on rootkits, we should really be making some considerations on stealth. If you&amp;rsquo;ve been following along, then once you&amp;rsquo;d loaded any of the previous rootkits, it&amp;rsquo;s presence would have been revealed by simply examining the output of lsmod.
-$ lsmod | grep rootkit rootkit 16384 0 Pretty obvious, right?</description>
     </item>
     
   </channel>
