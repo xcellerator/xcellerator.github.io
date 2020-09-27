@@ -146,6 +146,51 @@
   
   <div class="post on-list">
     <h1 class="post-title">
+      <a href="/posts/docker_escape/">Privileged Container Escapes with Kernel Modules</a></h1>
+    <div class="post-meta">
+      <span class="post-date">
+        2020-09-27
+      </span>
+      <span class="post-author">::
+        TheXcellerator</span>
+    </div>
+
+    
+    <span class="post-tags">
+      
+      #<a href="/tags/linux/">linux</a>&nbsp;
+      
+      #<a href="/tags/privileged/">privileged</a>&nbsp;
+      
+      #<a href="/tags/docker/">docker</a>&nbsp;
+      
+      #<a href="/tags/container/">container</a>&nbsp;
+      
+      #<a href="/tags/escape/">escape</a>&nbsp;
+      
+    </span>
+    
+
+    
+
+    <div class="post-content">
+      
+      
+      In all the playing around I’ve been doing with Linux kernel modules, I decided to see what would happen if you tried to load one from a Docker container. It turns out that privileged containers (or just those with CAP_SYS_MODULE) are able to use the sys_init_module() and sys_finit_module() syscalls - which are what’s used to load kernel modules. As all containers share their kernel with the host (unlike VMs), this clearly results in yet another complete system compromise.
+      
+      
+    </div>
+
+    
+    <div>
+      <a class="read-more button"
+        href="/posts/docker_escape/">Read more →</a>
+    </div>
+    
+  </div>
+  
+  <div class="post on-list">
+    <h1 class="post-title">
       <a href="/posts/linux_rootkits_06/">Linux Rootkits Part 6: Hiding Directories</a></h1>
     <div class="post-meta">
       <span class="post-date">
@@ -228,54 +273,6 @@ $ lsmod | grep rootkit rootkit 16384 0 Pretty obvious, right?
     <div>
       <a class="read-more button"
         href="/posts/linux_rootkits_05/">Read more →</a>
-    </div>
-    
-  </div>
-  
-  <div class="post on-list">
-    <h1 class="post-title">
-      <a href="/posts/linux_rootkits_04/">Linux Rootkits Part 4: Backdooring PRNGs by Interfering with Char Devices</a></h1>
-    <div class="post-meta">
-      <span class="post-date">
-        2020-09-09
-      </span>
-      <span class="post-author">::
-        TheXcellerator</span>
-    </div>
-
-    
-    <span class="post-tags">
-      
-      #<a href="/tags/linux/">linux</a>&nbsp;
-      
-      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
-      
-      #<a href="/tags/char/">char</a>&nbsp;
-      
-      #<a href="/tags/device/">device</a>&nbsp;
-      
-      #<a href="/tags/random/">random</a>&nbsp;
-      
-      #<a href="/tags/urandom/">urandom</a>&nbsp;
-      
-    </span>
-    
-
-    
-
-    <div class="post-content">
-      
-      
-      We saw in Part 3 how easy it is to add some extra functionality to a syscall. This time we’re going to target a pair of kernel functions that are not syscalls, and can’t be called directly. To understand what these are, it’s worth discussing char devices a little first.
-Char Devices in Linux Although you might not recognise the name, you’re probably already pretty familiar with a bunch of char (or chararacter) devices already.
-      
-      
-    </div>
-
-    
-    <div>
-      <a class="read-more button"
-        href="/posts/linux_rootkits_04/">Read more →</a>
     </div>
     
   </div>

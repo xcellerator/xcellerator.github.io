@@ -7,7 +7,16 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Sat, 19 Sep 2020 19:00:00 +0100</lastBuildDate><atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 27 Sep 2020 10:00:00 +0100</lastBuildDate><atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Privileged Container Escapes with Kernel Modules</title>
+      <link>/posts/docker_escape/</link>
+      <pubDate>Sun, 27 Sep 2020 10:00:00 +0100</pubDate>
+      
+      <guid>/posts/docker_escape/</guid>
+      <description>In all the playing around I&amp;rsquo;ve been doing with Linux kernel modules, I decided to see what would happen if you tried to load one from a Docker container. It turns out that privileged containers (or just those with CAP_SYS_MODULE) are able to use the sys_init_module() and sys_finit_module() syscalls - which are what&amp;rsquo;s used to load kernel modules. As all containers share their kernel with the host (unlike VMs), this clearly results in yet another complete system compromise.</description>
+    </item>
+    
     <item>
       <title>Linux Rootkits Part 6: Hiding Directories</title>
       <link>/posts/linux_rootkits_06/</link>

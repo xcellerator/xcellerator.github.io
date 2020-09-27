@@ -146,6 +146,54 @@
   
   <div class="post on-list">
     <h1 class="post-title">
+      <a href="/posts/linux_rootkits_04/">Linux Rootkits Part 4: Backdooring PRNGs by Interfering with Char Devices</a></h1>
+    <div class="post-meta">
+      <span class="post-date">
+        2020-09-09
+      </span>
+      <span class="post-author">::
+        TheXcellerator</span>
+    </div>
+
+    
+    <span class="post-tags">
+      
+      #<a href="/tags/linux/">linux</a>&nbsp;
+      
+      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
+      
+      #<a href="/tags/char/">char</a>&nbsp;
+      
+      #<a href="/tags/device/">device</a>&nbsp;
+      
+      #<a href="/tags/random/">random</a>&nbsp;
+      
+      #<a href="/tags/urandom/">urandom</a>&nbsp;
+      
+    </span>
+    
+
+    
+
+    <div class="post-content">
+      
+      
+      We saw in Part 3 how easy it is to add some extra functionality to a syscall. This time we’re going to target a pair of kernel functions that are not syscalls, and can’t be called directly. To understand what these are, it’s worth discussing char devices a little first.
+Char Devices in Linux Although you might not recognise the name, you’re probably already pretty familiar with a bunch of char (or chararacter) devices already.
+      
+      
+    </div>
+
+    
+    <div>
+      <a class="read-more button"
+        href="/posts/linux_rootkits_04/">Read more →</a>
+    </div>
+    
+  </div>
+  
+  <div class="post on-list">
+    <h1 class="post-title">
       <a href="/posts/linux_rootkits_03/">Linux Rootkits Part 3: A Backdoor to Root</a></h1>
     <div class="post-meta">
       <span class="post-date">
@@ -230,46 +278,6 @@ Luckily for us, there is already a great list of potential targets: syscalls! Sy
     
   </div>
   
-  <div class="post on-list">
-    <h1 class="post-title">
-      <a href="/posts/linux_rootkits_01/">Linux Rootkits Part 1: Introduction and Worflow</a></h1>
-    <div class="post-meta">
-      <span class="post-date">
-        2020-08-25
-      </span>
-      <span class="post-author">::
-        TheXcellerator</span>
-    </div>
-
-    
-    <span class="post-tags">
-      
-      #<a href="/tags/linux/">linux</a>&nbsp;
-      
-      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
-      
-    </span>
-    
-
-    
-
-    <div class="post-content">
-      
-      
-      Learning about Linux rootkits is a great way to learn more about how the kernel works. What’s great about it is that, unless you really understand what the kernel is doing, your rootkit is unlikely to work, so it serves as a fantasic verifier.
-In the FreeBSD world, you can find Joseph Kong’s amazing book Designing BSD Rootkits. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD.
-      
-      
-    </div>
-
-    
-    <div>
-      <a class="read-more button"
-        href="/posts/linux_rootkits_01/">Read more →</a>
-    </div>
-    
-  </div>
-  
   <div class="pagination">
   <div class="pagination__buttons">
     
@@ -280,6 +288,13 @@ In the FreeBSD world, you can find Joseph Kong’s amazing book Designing BSD Ro
         </a>
       </span>
     
+    
+      <span class="button next">
+        <a href="/categories/linux/page/3/">
+          <span class="button__text">Older posts</span>
+          <span class="button__icon">→</span>
+        </a>
+      </span>
     
   </div>
 </div>

