@@ -146,6 +146,49 @@
   
   <div class="post on-list">
     <h1 class="post-title">
+      <a href="/posts/linux_rootkits_07/">Linux Rootkits Part 7: Hiding Processes</a></h1>
+    <div class="post-meta">
+      <span class="post-date">
+        2020-10-01
+      </span>
+      <span class="post-author">::
+        TheXcellerator</span>
+    </div>
+
+    
+    <span class="post-tags">
+      
+      #<a href="/tags/linux/">linux</a>&nbsp;
+      
+      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
+      
+      #<a href="/tags/stealth/">stealth</a>&nbsp;
+      
+      #<a href="/tags/processes/">processes</a>&nbsp;
+      
+    </span>
+    
+
+    
+
+    <div class="post-content">
+      
+      
+      Now that we know how to hide directories (see last time), we can also hide processes! This is because nearly all userspace tools that give us information about processes just read the contents of the /proc/ filesystem. We can check this by looking at the output of strace -e openat ps or strace -e openat top. So, if we hide directories with the name of the PID we want to keep secret, then these userspace tools won’t notice that the process is there!
+      
+      
+    </div>
+
+    
+    <div>
+      <a class="read-more button"
+        href="/posts/linux_rootkits_07/">Read more →</a>
+    </div>
+    
+  </div>
+  
+  <div class="post on-list">
+    <h1 class="post-title">
       <a href="/posts/docker_escape/">Privileged Container Escapes with Kernel Modules</a></h1>
     <div class="post-meta">
       <span class="post-date">
@@ -229,50 +272,6 @@ Roughly speaking, directory listing is handled by the syscall sys_getdents64 and
     <div>
       <a class="read-more button"
         href="/posts/linux_rootkits_06/">Read more →</a>
-    </div>
-    
-  </div>
-  
-  <div class="post on-list">
-    <h1 class="post-title">
-      <a href="/posts/linux_rootkits_05/">Linux Rootkits Part 5: Hiding Kernel Modules from Userspace</a></h1>
-    <div class="post-meta">
-      <span class="post-date">
-        2020-09-17
-      </span>
-      <span class="post-author">::
-        TheXcellerator</span>
-    </div>
-
-    
-    <span class="post-tags">
-      
-      #<a href="/tags/linux/">linux</a>&nbsp;
-      
-      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
-      
-      #<a href="/tags/stealth/">stealth</a>&nbsp;
-      
-      #<a href="/tags/linked-lists/">linked lists</a>&nbsp;
-      
-    </span>
-    
-
-    
-
-    <div class="post-content">
-      
-      
-      So far, we’ve seen how hooking both syscalls and regular functions can be put to good use. But, seeing as how this is a series on rootkits, we should really be making some considerations on stealth. If you’ve been following along, then once you’d loaded any of the previous rootkits, it’s presence would have been revealed by simply examining the output of lsmod.
-$ lsmod | grep rootkit rootkit 16384 0 Pretty obvious, right?
-      
-      
-    </div>
-
-    
-    <div>
-      <a class="read-more button"
-        href="/posts/linux_rootkits_05/">Read more →</a>
     </div>
     
   </div>

