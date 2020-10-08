@@ -7,7 +7,17 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Thu, 01 Oct 2020 12:00:00 +0100</lastBuildDate><atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 02 Oct 2020 12:00:00 +0100</lastBuildDate><atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Linux Rootkits Part 8: Hiding Open Ports</title>
+      <link>/posts/linux_rootkits_08/</link>
+      <pubDate>Fri, 02 Oct 2020 12:00:00 +0100</pubDate>
+      
+      <guid>/posts/linux_rootkits_08/</guid>
+      <description>Most userspace system tools just parse and manipulate data from one or more files and present them nicely to STDOUT. We&amp;rsquo;ve already seen this with processes (see Part 7), but this time we&amp;rsquo;re going to do the same thing with open ports. By the end, we&amp;rsquo;ll be able to open a listener on port 8080 (any port would do) without it showing up in things like netstat.
+Assuming that a file is being read from, we need to try to find out which one.</description>
+    </item>
+    
     <item>
       <title>Linux Rootkits Part 7: Hiding Processes</title>
       <link>/posts/linux_rootkits_07/</link>
