@@ -186,7 +186,7 @@ Luckily for us, there is already a great list of potential targets: syscalls! Sy
 <p>But first, it will be helpful to have a better idea about how we make a syscall from userspace - after all, it&rsquo;s this process that we&rsquo;re hoping to intercept!</p>
 <h1 id="syscalls-in-linux-from-userspace">Syscalls in Linux from Userspace<a href="#syscalls-in-linux-from-userspace" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>If you took a look at the <a href="https://github.com/torvalds/linux/blob/master/arch/x86/entry/syscalls/syscall_64.tbl">syscall table</a> above, then you&rsquo;d have seen that every syscall has an associated number assigned to it (these numbers are actually fairly fluid and will vary between different architectures and kernel versions, but fortunately we&rsquo;re provided with a bunch of macros to get us out of trouble).</p>
-<p>If we want to to make a syscall, then we have to store the syscall number we want into the <code>rax</code> register and then call the kernel with the software interrupt <code>int 0x80</code>. Any arguments that the syscall needs have to be loaded into certain registers before we use the interrupt and the return value is almost always placed into <code>rax</code>.</p>
+<p>If we want to to make a syscall, then we have to store the syscall number we want into the <code>rax</code> register and then call the kernel with the software interrupt <code>syscall</code>. Any arguments that the syscall needs have to be loaded into certain registers before we use the interrupt and the return value is almost always placed into <code>rax</code>.</p>
 <p>This is best illustrated by an example - let&rsquo;s take syscall 0, <code>sys_read</code> (all syscalls are prefaced by <code>sys_</code>). If we look up this syscall with <code>man 2 read</code>, we see that it is defined as:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">ssize_t <span style="color:#a6e22e">read</span>(<span style="color:#66d9ef">int</span> fd, <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>buf, size_t count);
 </code></pre></div><p><code>fd</code> is the file descriptor (returned from calling <code>open()</code>), <code>buf</code> is a buffer to store the read data into and <code>count</code> is the number of bytes to read. The return value is number of bytes successfully read, and is <code>-1</code> on error.</p>
@@ -216,7 +216,7 @@ Luckily for us, there is already a great list of potential targets: syscalls! Sy
 <span style="color:#a6e22e">mov</span> rdi, <span style="color:#ae81ff">5</span>
 <span style="color:#a6e22e">mov</span> rsi, buf
 <span style="color:#a6e22e">mov</span> rdx, <span style="color:#ae81ff">10</span>
-<span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x80</span>
+<span style="color:#a6e22e">syscall</span>
 </code></pre></div><p>This would read 10 bytes from file descriptor 5 (randomly chosen) and store the contents in the memory location pointed to by <code>buf</code>. Pretty simple, right?</p>
 <h1 id="how-the-kernel-handles-syscalls">How the kernel handles syscalls<a href="#how-the-kernel-handles-syscalls" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>That&rsquo;s all well and good for userspace, but what about the kernel? Our rootkits are going to run in the context of the kernel, so we ought to have some understanding of how the kernel handles syscalls.</p>
