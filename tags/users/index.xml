@@ -7,11 +7,11 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Sun, 04 Oct 2020 12:00:00 +0100</lastBuildDate><atom:link href="/tags/users/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 16 Oct 2020 12:00:00 +0100</lastBuildDate><atom:link href="/tags/users/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Linux Rootkits Part 9: Hiding Logged In Users (Modifying File Contents Without Touching Disk)</title>
       <link>/posts/linux_rootkits_09/</link>
-      <pubDate>Sun, 04 Oct 2020 12:00:00 +0100</pubDate>
+      <pubDate>Fri, 16 Oct 2020 12:00:00 +0100</pubDate>
       
       <guid>/posts/linux_rootkits_09/</guid>
       <description>Let&amp;rsquo;s see if we can hide the fact that a user is logged in! The idea is that we&amp;rsquo;ll be able to spawn a shell or login in as some user (we&amp;rsquo;ll choose root) and not have it show up in the output of tools like who or finger.
