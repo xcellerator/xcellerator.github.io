@@ -7,13 +7,22 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Fri, 16 Oct 2020 12:00:00 +0100</lastBuildDate><atom:link href="/categories/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 17 Oct 2020 15:00:00 +0100</lastBuildDate><atom:link href="/categories/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>linux</title>
       <link>/categories/linux/</link>
-      <pubDate>Fri, 16 Oct 2020 12:00:00 +0100</pubDate>
+      <pubDate>Sat, 17 Oct 2020 15:00:00 +0100</pubDate>
       
       <guid>/categories/linux/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>reverse_engineering</title>
+      <link>/categories/reverse_engineering/</link>
+      <pubDate>Sat, 17 Oct 2020 15:00:00 +0100</pubDate>
+      
+      <guid>/categories/reverse_engineering/</guid>
       <description></description>
     </item>
     
@@ -32,15 +41,6 @@
       <pubDate>Tue, 25 Aug 2020 21:00:00 +0100</pubDate>
       
       <guid>/categories/other/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>reverse_engineering</title>
-      <link>/categories/reverse_engineering/</link>
-      <pubDate>Tue, 23 Jun 2020 20:37:00 +0100</pubDate>
-      
-      <guid>/categories/reverse_engineering/</guid>
       <description></description>
     </item>
     

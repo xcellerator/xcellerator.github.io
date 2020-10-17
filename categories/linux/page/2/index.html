@@ -146,10 +146,10 @@
   
   <div class="post on-list">
     <h1 class="post-title">
-      <a href="/posts/linux_rootkits_05/">Linux Rootkits Part 5: Hiding Kernel Modules from Userspace</a></h1>
+      <a href="/posts/linux_rootkits_01/">Linux Rootkits Part 1: Introduction and Worflow</a></h1>
     <div class="post-meta">
       <span class="post-date">
-        2020-09-17
+        2020-08-25
       </span>
       <span class="post-author">::
         TheXcellerator</span>
@@ -162,10 +162,6 @@
       
       #<a href="/tags/rootkit/">rootkit</a>&nbsp;
       
-      #<a href="/tags/stealth/">stealth</a>&nbsp;
-      
-      #<a href="/tags/linked-lists/">linked lists</a>&nbsp;
-      
     </span>
     
 
@@ -174,8 +170,8 @@
     <div class="post-content">
       
       
-      So far, we’ve seen how hooking both syscalls and regular functions can be put to good use. But, seeing as how this is a series on rootkits, we should really be making some considerations on stealth. If you’ve been following along, then once you’d loaded any of the previous rootkits, it’s presence would have been revealed by simply examining the output of lsmod.
-$ lsmod | grep rootkit rootkit 16384 0 Pretty obvious, right?
+      Learning about Linux rootkits is a great way to learn more about how the kernel works. What’s great about it is that, unless you really understand what the kernel is doing, your rootkit is unlikely to work, so it serves as a fantasic verifier.
+In the FreeBSD world, you can find Joseph Kong’s amazing book Designing BSD Rootkits. It was written in 2009, so is actually pretty outdated - which means that you have to do quite a bit of research to get the sample progras to work on modern FreeBSD.
       
       
     </div>
@@ -183,99 +179,7 @@ $ lsmod | grep rootkit rootkit 16384 0 Pretty obvious, right?
     
     <div>
       <a class="read-more button"
-        href="/posts/linux_rootkits_05/">Read more →</a>
-    </div>
-    
-  </div>
-  
-  <div class="post on-list">
-    <h1 class="post-title">
-      <a href="/posts/linux_rootkits_04/">Linux Rootkits Part 4: Backdooring PRNGs by Interfering with Char Devices</a></h1>
-    <div class="post-meta">
-      <span class="post-date">
-        2020-09-09
-      </span>
-      <span class="post-author">::
-        TheXcellerator</span>
-    </div>
-
-    
-    <span class="post-tags">
-      
-      #<a href="/tags/linux/">linux</a>&nbsp;
-      
-      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
-      
-      #<a href="/tags/char/">char</a>&nbsp;
-      
-      #<a href="/tags/device/">device</a>&nbsp;
-      
-      #<a href="/tags/random/">random</a>&nbsp;
-      
-      #<a href="/tags/urandom/">urandom</a>&nbsp;
-      
-    </span>
-    
-
-    
-
-    <div class="post-content">
-      
-      
-      We saw in Part 3 how easy it is to add some extra functionality to a syscall. This time we’re going to target a pair of kernel functions that are not syscalls, and can’t be called directly. To understand what these are, it’s worth discussing char devices a little first.
-Char Devices in Linux Although you might not recognise the name, you’re probably already pretty familiar with a bunch of char (or chararacter) devices already.
-      
-      
-    </div>
-
-    
-    <div>
-      <a class="read-more button"
-        href="/posts/linux_rootkits_04/">Read more →</a>
-    </div>
-    
-  </div>
-  
-  <div class="post on-list">
-    <h1 class="post-title">
-      <a href="/posts/linux_rootkits_03/">Linux Rootkits Part 3: A Backdoor to Root</a></h1>
-    <div class="post-meta">
-      <span class="post-date">
-        2020-08-29
-      </span>
-      <span class="post-author">::
-        TheXcellerator</span>
-    </div>
-
-    
-    <span class="post-tags">
-      
-      #<a href="/tags/linux/">linux</a>&nbsp;
-      
-      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
-      
-      #<a href="/tags/root/">root</a>&nbsp;
-      
-      #<a href="/tags/backdoor/">backdoor</a>&nbsp;
-      
-    </span>
-    
-
-    
-
-    <div class="post-content">
-      
-      
-      Now that you know how to make a Linux kernel module that can hook any exposed function in kernel memory (Part 1 and Part 2), let’s get down to writing a hook that does something interesting!
-In this first example, we’re going to make a rootkit that intercepts calls to sys_kill. 99% of the time, we only use sys_kill (the userspace tool we normally use is the familiar kill) to kill a process, i.
-      
-      
-    </div>
-
-    
-    <div>
-      <a class="read-more button"
-        href="/posts/linux_rootkits_03/">Read more →</a>
+        href="/posts/linux_rootkits_01/">Read more →</a>
     </div>
     
   </div>
@@ -290,13 +194,6 @@ In this first example, we’re going to make a rootkit that intercepts calls to 
         </a>
       </span>
     
-    
-      <span class="button next">
-        <a href="/categories/linux/page/3/">
-          <span class="button__text">Older posts</span>
-          <span class="button__icon">→</span>
-        </a>
-      </span>
     
   </div>
 </div>
