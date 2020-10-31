@@ -149,6 +149,50 @@
   
   <div class="post on-list">
     <h1 class="post-title">
+      <a href="/posts/linux_rootkits_10/">Fancy Bear&rsquo;s a Lumberjack and It&rsquo;s Okay - A Dive into the Kernel Component of Drovorub</a></h1>
+    <div class="post-meta">
+      <span class="post-date">
+        2020-10-29
+      </span>
+      <span class="post-author">::
+        TheXcellerator</span>
+    </div>
+
+    
+    <span class="post-tags">
+      
+      #<a href="/tags/linux/">linux</a>&nbsp;
+      
+      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
+      
+      #<a href="/tags/drovorub/">drovorub</a>&nbsp;
+      
+      #<a href="/tags/fancy-bear/">fancy bear</a>&nbsp;
+      
+    </span>
+    
+
+    
+
+    <div class="post-content">
+      
+      
+      What’s In A Name? Back in August, the NSA and FBI jointly issued a Cybersecurity Advisory on a previously undisclosed piece of malware developed by the Russian GRU called “Drovorub” - a name that comes from the Russian words “дрово” and “руб”, which together translate to “woodcutter” or, as I’m taking it, “lumberjack”.
+What made this particular malware more interesting than usual is that it included a kernel module rootkit! In this post, I want to go through some of the techniques that this kernel module uses and how it relates to the techniques that we’ve already covered in other posts.
+      
+      
+    </div>
+
+    
+    <div>
+      <a class="read-more button"
+        href="/posts/linux_rootkits_10/">Read more →</a>
+    </div>
+    
+  </div>
+  
+  <div class="post on-list">
+    <h1 class="post-title">
       <a href="/posts/bleeding_tooth/">Bleeding Tooth Deep Dive</a></h1>
     <div class="post-meta">
       <span class="post-date">
@@ -548,48 +592,6 @@ In this first example, we’re going to make a rootkit that intercepts calls to 
     <div>
       <a class="read-more button"
         href="/posts/linux_rootkits_03/">Read more →</a>
-    </div>
-    
-  </div>
-  
-  <div class="post on-list">
-    <h1 class="post-title">
-      <a href="/posts/linux_rootkits_02/">Linux Rootkits Part 2: Ftrace and Function Hooking</a></h1>
-    <div class="post-meta">
-      <span class="post-date">
-        2020-08-26
-      </span>
-      <span class="post-author">::
-        TheXcellerator</span>
-    </div>
-
-    
-    <span class="post-tags">
-      
-      #<a href="/tags/linux/">linux</a>&nbsp;
-      
-      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
-      
-      #<a href="/tags/ftrace/">ftrace</a>&nbsp;
-      
-    </span>
-    
-
-    
-
-    <div class="post-content">
-      
-      
-      Okay, so you’ve built your first kernel module, but now you want to make it do something cool - something like altering the behaviour of the running kernel. The way we do this is by function hooking, but the question is - how do we know which functions to hook?
-Luckily for us, there is already a great list of potential targets: syscalls! Syscalls (or system calls) are kernel functions that can be called from userspace, and are required for almost anything remotely interesting.
-      
-      
-    </div>
-
-    
-    <div>
-      <a class="read-more button"
-        href="/posts/linux_rootkits_02/">Read more →</a>
     </div>
     
   </div>

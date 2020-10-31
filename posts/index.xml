@@ -7,7 +7,17 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Sat, 17 Oct 2020 15:00:00 +0100</lastBuildDate><atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 29 Oct 2020 12:00:00 +0100</lastBuildDate><atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Fancy Bear&#39;s a Lumberjack and It&#39;s Okay - A Dive into the Kernel Component of Drovorub</title>
+      <link>/posts/linux_rootkits_10/</link>
+      <pubDate>Thu, 29 Oct 2020 12:00:00 +0100</pubDate>
+      
+      <guid>/posts/linux_rootkits_10/</guid>
+      <description>What&amp;rsquo;s In A Name? Back in August, the NSA and FBI jointly issued a Cybersecurity Advisory on a previously undisclosed piece of malware developed by the Russian GRU called &amp;ldquo;Drovorub&amp;rdquo; - a name that comes from the Russian words &amp;ldquo;дрово&amp;rdquo; and &amp;ldquo;руб&amp;rdquo;, which together translate to &amp;ldquo;woodcutter&amp;rdquo; or, as I&amp;rsquo;m taking it, &amp;ldquo;lumberjack&amp;rdquo;.
+What made this particular malware more interesting than usual is that it included a kernel module rootkit! In this post, I want to go through some of the techniques that this kernel module uses and how it relates to the techniques that we&amp;rsquo;ve already covered in other posts.</description>
+    </item>
+    
     <item>
       <title>Bleeding Tooth Deep Dive</title>
       <link>/posts/bleeding_tooth/</link>

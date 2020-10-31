@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>Fancy Bear&#39;s a Lumberjack and It&#39;s Okay - A Dive into the Kernel Component of Drovorub :: TheXcellerator</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="description" content="What&amp;rsquo;s In A Name? Back in August, the NSA and FBI jointly issued a Cybersecurity Advisory on a previously undisclosed piece of malware developed by the Russian GRU called &amp;ldquo;Drovorub&amp;rdquo; - a name that comes from the Russian words &amp;ldquo;дрово&amp;rdquo; and &amp;ldquo;руб&amp;rdquo;, which together translate to &amp;ldquo;woodcutter&amp;rdquo; or, as I&amp;rsquo;m taking it, &amp;ldquo;lumberjack&amp;rdquo;.
+What made this particular malware more interesting than usual is that it included a kernel module rootkit! In this post, I want to go through some of the techniques that this kernel module uses and how it relates to the techniques that we&amp;rsquo;ve already covered in other posts." />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="/posts/linux_rootkits_10/" />
+
+
+
+
+<link rel="stylesheet" href="/assets/style.css">
+
+  <link rel="stylesheet" href="/assets/blue.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/img/apple-touch-icon-144-precomposed.png">
+
+  <link rel="shortcut icon" href="/img/favicon/blue.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+<meta name="twitter:creator" content="TheXcellerator" />
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Fancy Bear&#39;s a Lumberjack and It&#39;s Okay - A Dive into the Kernel Component of Drovorub :: TheXcellerator">
+<meta property="og:description" content="What&amp;rsquo;s In A Name? Back in August, the NSA and FBI jointly issued a Cybersecurity Advisory on a previously undisclosed piece of malware developed by the Russian GRU called &amp;ldquo;Drovorub&amp;rdquo; - a name that comes from the Russian words &amp;ldquo;дрово&amp;rdquo; and &amp;ldquo;руб&amp;rdquo;, which together translate to &amp;ldquo;woodcutter&amp;rdquo; or, as I&amp;rsquo;m taking it, &amp;ldquo;lumberjack&amp;rdquo;.
+What made this particular malware more interesting than usual is that it included a kernel module rootkit! In this post, I want to go through some of the techniques that this kernel module uses and how it relates to the techniques that we&amp;rsquo;ve already covered in other posts." />
+<meta property="og:url" content="/posts/linux_rootkits_10/" />
+<meta property="og:site_name" content="Fancy Bear&#39;s a Lumberjack and It&#39;s Okay - A Dive into the Kernel Component of Drovorub" />
+
+  
+    <meta property="og:image" content="/img/favicon/blue.png">
+  
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+  <meta property="article:section" content="linux" />
+
+
+  <meta property="article:published_time" content="2020-10-29 12:00:00 &#43;0100 &#43;0100" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="">
+
+
+<div class="container center headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    TheXcellerator
+  </div>
+</a>
+
+    </div>
+    <div class="menu-trigger">menu</div>
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/categories/cryptography/">Cryptography</a></li>
+        
+      
+        
+          <li><a href="/categories/linux/">Linux</a></li>
+        
+      
+        
+          <li><a href="/categories/other/">Other</a></li>
+        
+      
+        
+          <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/categories/cryptography/">Cryptography</a></li>
+      
+    
+      
+        <li><a href="/categories/linux/">Linux</a></li>
+      
+    
+      
+        <li><a href="/categories/other/">Other</a></li>
+      
+    
+      
+        <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="/posts/linux_rootkits_10/">Fancy Bear&rsquo;s a Lumberjack and It&rsquo;s Okay - A Dive into the Kernel Component of Drovorub</a></h1>
+  <div class="post-meta">
+      
+    <span class="post-date">
+      2020-10-29
+    </span>
+    
+    
+    <span class="post-author">::
+      TheXcellerator
+    </span>
+    
+  </div>
+
+  
+  <span class="post-tags">
+    
+    #<a href="/tags/linux/">linux</a>&nbsp;
+    
+    #<a href="/tags/rootkit/">rootkit</a>&nbsp;
+    
+    #<a href="/tags/drovorub/">drovorub</a>&nbsp;
+    
+    #<a href="/tags/fancy-bear/">fancy bear</a>&nbsp;
+    
+  </span>
+  
+
+  
+
+  <div class="post-content"><div>
+        <h1 id="whats-in-a-name">What&rsquo;s In A Name?<a href="#whats-in-a-name" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Back in August, the NSA and FBI <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF">jointly issued a Cybersecurity Advisory</a> on a previously undisclosed piece of malware developed by the Russian GRU called &ldquo;Drovorub&rdquo; - a name that comes from the Russian words &ldquo;дрово&rdquo; and &ldquo;руб&rdquo;, which together translate to &ldquo;woodcutter&rdquo; or, as I&rsquo;m taking it, &ldquo;lumberjack&rdquo;.</p>
+<p>What made this particular malware more interesting than usual is that it included a kernel module rootkit! In this post, I want to go through some of the techniques that this kernel module uses and how it relates to the techniques that we&rsquo;ve already covered in other posts.</p>
+<p>Somewhat frustratingly, the report is fairly sparse on details. It tells us <em>what</em> the malware is capable of, but not precisley <em>how</em> it accomplishes it. For example, we are told that Drovorub hooks kernel functions &ldquo;either by patching functions directly, or by overwriting function pointers that point to the functions&rdquo;. What method is used to do this? The phrase &ldquo;overwriting function pointers that point to the functions&rdquo; could refer to modifying the syscall table (stored in the <code>sys_call_table</code> kernel object) - a rather old and messy technique that only works for hooking syscalls. However, the report appears to indicate that the Drovorub authors favour hooking regular kernel functions, as no mention of syscalls can be found.</p>
+<p>As far as &ldquo;patching functions directly&rdquo; goes - I&rsquo;m not sure. I highly doubt that Drovorub patches the function code directly in kernel memory. While this is certainly a feasible attack in general (take a look at <a href="https://github.com/xcellerator/freebsd_kernel_hacking/tree/master/chapter5_runtime_kernel_memory_patching/5.6_inline_function_hooking">this example</a> for FreeBSD 12), I can&rsquo;t see it working well under Linux. Instead, these words may refer to the Ftrace method that we&rsquo;ve been using throughout this series. Sadly, this is just guesswork on my part though. If anyone has any better ideas or insight, I&rsquo;d be very interested to hear it!</p>
+<p>As we go through some of the techniques mentioned by the report, I&rsquo;ll link to any relevant earlier posts in this series, but here is the full list if you&rsquo;ve missed any.</p>
+<ul>
+<li><a href="../linux_rootkits_01">Part 1: Introduction and Workflow</a></li>
+<li><a href="../linux_rootkits_02">Part 2: Ftrace and Function Hooking</a></li>
+<li><a href="../linux_rootkits_03">Part 3: A Backdoor to Root</a></li>
+<li><a href="../linux_rootkits_04">Part 4: Backdooring PRNGs by Interfering with Char Devices</a></li>
+<li><a href="../linux_rootkits_05">Part 5: Hiding Kernel Modules from Userspace</a></li>
+<li><a href="../linux_rootkits_06">Part 6: Hiding Directories</a></li>
+<li><a href="../linux_rootkits_07">Part 7: Hiding Processes</a></li>
+<li><a href="../linux_rootkits_08">Part 8: Hiding Open Ports</a></li>
+<li><a href="../linux_rootkits_09">Part 9: Hiding Logged In Users (Modifying File Contents Without Touching Disk)</a></li>
+</ul>
+<p>The privileged container escape I wrote will also be relevant:</p>
+<ul>
+<li><a href="../docker_escape">Privileged Container Escapes with Kernel Modules</a></li>
+</ul>
+<p>If you&rsquo;re reading through the <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF">official report</a>, then the interesting parts are in the <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF#%5B%7B%22num%22%3A75%2C%22gen%22%3A0%7D%2C%7B%22name%22%3A%22XYZ%22%7D%2C69%2C556%2C0%5D">&ldquo;Host-based Communications&rdquo;</a> and <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF#%5B%7B%22num%22%3A76%2C%22gen%22%3A0%7D%2C%7B%22name%22%3A%22XYZ%22%7D%2C69%2C187%2C0%5D">&ldquo;Evasion&rdquo;</a> sections.</p>
+<blockquote>
+<p>A quick note: I&rsquo;m not going to attempt to recreate any of the code that went into the Drovorub malware. There is more than enough information contained within this series if you want to do that, but I neither endorse, nor encourage it. Please learn what you can in order to better understand the threats posed by these kinds of APTs.</p>
+</blockquote>
+<h1 id="communication-with-userspace">Communication with Userspace<a href="#communication-with-userspace" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>First off, let&rsquo;s look at the way that the Drovorub kernel module communicates with userspace. The method outlined by the <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF">report</a> is very clever and involves a combination of 2 techniques we&rsquo;ve already looked at.</p>
+<p>The main technique is a variation on the method we used in the <a href="../docker_escape">privileged docker escape</a>, but instead of a procfs file, Drovorub communicates via one of the pseudo-devices under <code>/dev/</code>. In our example, we implemented a brand new <code>/proc/escape</code> &ldquo;file&rdquo; by writing a custom read/write handler and registering the procfile with the kernel.</p>
+<p>What makes the method used by Drovorub so clever is that they are hijacking an <em>existing</em> device file instead of creating a new one. The report <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF#%5B%7B%22num%22%3A84%2C%22gen%22%3A0%7D%2C%7B%22name%22%3A%22XYZ%22%7D%2C69%2C349%2C0%5D">states that</a> <code>/dev/zero</code> is the device that&rsquo;s used, but later we&rsquo;ll see why that&rsquo;s a strange choice.</p>
+<p>You may recall from <a href="../linux_rootkits_04">Part 4</a> that we&rsquo;ve already implemented this functionality ourselves when we hijacked the <code>random_read()</code> kernel function to return sequences of <code>0x00</code> instead of random bytes when <code>/dev/random</code> was read from.</p>
+<p>By combining these two methods, Drovorub is able to communicate between it&rsquo;s kernelspace and userspace components in the following way:</p>
+<h4 id="userland---kernel">Userland -&gt; Kernel:<a href="#userland---kernel" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h4>
+<ul>
+<li>Userland process writes a command to <code>/dev/zero</code></li>
+<li>Kernel intercepts write to <code>/dev/zero</code> by hooking the corresponding write handler</li>
+<li>Kernel carries out any functionality associated to the command that was sent</li>
+</ul>
+<h4 id="kernel---userland">Kernel -&gt; Userland:<a href="#kernel---userland" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h4>
+<ul>
+<li>Kernel sends a <code>SIGUSR1</code> signal to the userland process to indicate that there is something for it to read back from <code>/dev/zero</code></li>
+<li>Userland process reads the contents of <code>/dev/zero</code></li>
+<li>Kernel returns a buffer of data to the userland process by hooking the read handler (after this transaction, subsequent reads to <code>/dev/zero</code> will behave normally)</li>
+</ul>
+<blockquote>
+<p>Exactly how the rootkit determines which PID to send a signal to isn&rsquo;t explained. <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF#%5B%7B%22num%22%3A75%2C%22gen%22%3A0%7D%2C%7B%22name%22%3A%22XYZ%22%7D%2C69%2C332%2C0%5D">Table XIII</a> of the report details the command format used by Drovorub. It&rsquo;s quite possible that the PID of the userland process is passed as part of the appended data to any command that requires some kind of output  (At least that would make sense in my mind, but I&rsquo;m totally guessing here).</p>
+</blockquote>
+<p>By looking at <a href="https://github.com/torvalds/linux/blob/master/drivers/char/mem.c">drivers/char/mem.c</a>, we find the <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/drivers/char/mem.c#L947"><code>zero_fops</code></a> <code>file_operations</code> struct which stores the handlers for the <code>/dev/zero</code> pseudo-device. In particular, we can see that the <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/drivers/char/mem.c#L951">read handler</a> and <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/drivers/char/mem.c#L949">write handler</a> is set to <code>read_zero</code> and <code>write_zero</code> respectively.</p>
+<p>The read handler can be found further up at <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/drivers/char/mem.c#L729">line 729</a>. This would be a very easy function to write a hook for - a simple <code>if</code> statement to check for some condition would decide whether we should fill the supplied buffer with some secret data for the user, or just go ahead to fill it with <code>0x0</code> by calling the real function.</p>
+<p>The write handler is a little different. Searching for <code>write_zero</code> give us a define on <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/drivers/char/mem.c#L902">line 902</a> which identifies <code>write_zero</code> with <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/drivers/char/mem.c#L679"><code>write_null</code></a>. This function is as simple as you might expect: it just just returns the <code>count</code> argument to indicate to userland that the buffer was written (even though it was discarded). The problem is that <code>write_null</code> is also the write handler under <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/drivers/char/mem.c#L931"><code>null_fops</code></a> which is the <code>file_operations</code> struct for <code>/dev/null</code>. It seems a little messy to hijack <code>write_null</code> because it interfers with two different devices at once, when only a single device is necessary.</p>
+<p>Looking at all the entries under <code>/dev</code> that are readable and writable by world, I first thought that the most logical candidates for this functionality would have beeen either <code>/dev/random</code> or <code>/dev/urandom</code>. Then I realised that they share a write handler too (see <a href="https://github.com/torvalds/linux/blob/5fc6b075e165f641fbc366b58b578055762d5f8c/drivers/char/random.c#L1990">here</a> and <a href="https://github.com/torvalds/linux/blob/5fc6b075e165f641fbc366b58b578055762d5f8c/drivers/char/random.c#L2000">here</a>), so it looks like either way you&rsquo;ll end up hijacking writes to two devices at once whether you like it or not.</p>
+<h1 id="process-hiding">Process Hiding<a href="#process-hiding" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>The first kernel-based capability that the <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF">report</a> talks about is hiding processes. We covered this in <a href="../linux_rootkits_07">Part 7</a> where we just masked the directory listing of <code>/proc/</code> to not show the PID we wanted to hide.</p>
+<p>Drovorub doubles down and uses another approach in conjunction. Depending on kernel version, it hooks either <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/kernel/pid.c#L309"><code>find_pid_ns()</code></a> or <code>find_pid()</code> and <code>find_task_by_pid_type()</code>. These last two are no longer present in the kernel - they got removed some time during the 2.6.27 cycle - which was back in October 2008! (see the <a href="#closing-remarks">end</a> for some ideas as why this might be).</p>
+<p>Let&rsquo;s take a look at <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/kernel/pid.c#L309"><code>find_pid_ns()</code></a>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> pid <span style="color:#f92672">*</span><span style="color:#a6e22e">find_pid_ns</span>(<span style="color:#66d9ef">int</span> nr, <span style="color:#66d9ef">struct</span> pid_namespace <span style="color:#f92672">*</span>ns)
+{
+    <span style="color:#66d9ef">return</span> idr_find(<span style="color:#f92672">&amp;</span>ns<span style="color:#f92672">-&gt;</span>idr, nr);
+}
+EXPORT_SYMBOL_GPL(find_ns_pid);
+</code></pre></div><p>This is prime function-hooking stuff. The description of <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/lib/idr.c#L158"><code>idr_find()</code></a> gives us a better idea of what this function is doing, but a better explanation is in the kernel documentation <a href="https://www.kernel.org/doc/html/v4.18/core-api/idr.html">here</a>.</p>
+<p>Essentially, <em>IDR</em> is the general ID allocation system in the kernel - whether those IDs are file descriptors, PIDs, device numbers or even more arcane stuff like SCSI tags. The <code>idr_find()</code> function takes an ID number (in our case a PID) and a <code>pid_namespace</code> and looks up the pointer corresponding to the ID number within that namespace.</p>
+<blockquote>
+<p>For the diehards, this is a bit more complicated that it sounds. <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/lib/idr.c#L158"><code>idr_find()</code></a> is a wrapper around <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/lib/radix-tree.c#L803"><code>radix_tree_lookup()</code></a>, which is in turn a wrapper around <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/lib/radix-tree.c#L731"><code>__radix_tree_lookup()</code></a>. This is where the magic happens. <a href="https://en.wikipedia.org/wiki/Radix_tree">Radix trees</a> are one of those computer-science-heavy concepts which borrow a lot from graph theory. What matters here is that there is a data structure that we use <code>__radix_tree_lookup()</code> to get the entries of.</p>
+</blockquote>
+<p>The clue to how a function hook for <code>find_pid_ns()</code> might be written can be found in the description of <code>idr_find()</code>. <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/lib/idr.c#L163">Here</a>, we see that a <code>NULL</code> pointer being returned indicates that either the ID is not allocated (or that the <code>NULL</code> pointer itself is associated to the ID - which would be rather bizarre).</p>
+<p>This must be what Drovorub is doing! A simple check against the <code>nr</code> argument to <code>find_pid_ns()</code> to see if it matches one of the PIDs we want to hide and it can either return the pointer from <code>idr_find()</code>, or just return <code>NULL</code> to indicate that the PID isn&rsquo;t associated to any process in memory.</p>
+<p>The thing that is so clever here is that, by hooking <code>find_pid_ns()</code> and not <code>idr_find()</code> directly, PID allocation is completely unaffected! The kernel will use the varous <code>idr_</code> and <code>radix_tree_</code> functions to check which PIDs are allocated, and what the lowest unallocated PID is before allocating a new one. This is important because Drovorub communicates with userland by first sending a <code>SIGUSR1</code> signal (described <a href="#kernel---userland">here</a>) to the process. Indeed, if we follow the chain of function calls from <code>sys_kill()</code> we eventually get to <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/kernel/pid.c#L472"><code>pid_nr_ns()</code></a>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">pid_t <span style="color:#a6e22e">pid_nr_ns</span>(<span style="color:#66d9ef">struct</span> pid <span style="color:#f92672">*</span>pid, <span style="color:#66d9ef">struct</span> pid_namespace <span style="color:#f92672">*</span>ns)
+{
+    <span style="color:#66d9ef">struct</span> upid <span style="color:#f92672">*</span>upid;
+    pid_t nr <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+
+    <span style="color:#66d9ef">if</span> (pid <span style="color:#f92672">&amp;&amp;</span> ns<span style="color:#f92672">-&gt;</span>level <span style="color:#f92672">&lt;=</span> pid<span style="color:#f92672">-&gt;</span>level) {
+        upid <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>pid<span style="color:#f92672">-&gt;</span>numbers[ns<span style="color:#f92672">-&gt;</span>level];
+        <span style="color:#66d9ef">if</span> (upid<span style="color:#f92672">-&gt;</span>ns <span style="color:#f92672">==</span> ns)
+            nr <span style="color:#f92672">=</span> upid<span style="color:#f92672">-&gt;</span>nr;
+    }
+    <span style="color:#66d9ef">return</span> nr;
+}
+EXPORT_SYMBOL_GPL(pid_nr_ns);
+</code></pre></div><blockquote>
+<p>For the interested, the chain is: <a href="https://github.com/torvalds/linux/blob/5fc6b075e165f641fbc366b58b578055762d5f8c/kernel/signal.c#L3661"><code>sys_kill()</code></a>, <a href="https://github.com/torvalds/linux/blob/5fc6b075e165f641fbc366b58b578055762d5f8c/kernel/signal.c#L3648"><code>prepare_kill_siginfo()</code></a>, <a href="https://github.com/torvalds/linux/blob/5fc6b075e165f641fbc366b58b578055762d5f8c/include/linux/sched.h#L1428"><code>task_tgid_vnr()</code></a>, <a href="https://github.com/torvalds/linux/blob/5fc6b075e165f641fbc366b58b578055762d5f8c/kernel/pid.c#L500"><code>__task_pid_nr_ns()</code></a>, <a href="https://github.com/torvalds/linux/blob/5fc6b075e165f641fbc366b58b578055762d5f8c/kernel/pid.c#L472"><code>pid_nr_ns()</code></a>.</p>
+</blockquote>
+<p>For whatever reason (there is likely a very good reason), <code>sys_kill()</code> doesn&rsquo;t go anywhere near the IDR subsystem. If it did, then Drovorub would probably have a lot of problems being able to hide processes this way and still send signals to them. I imagine that this is a broad, kernel-wide decision that would like have a lot of ramifications if done differently (if you know the precise reason, please let me know!).</p>
+<h1 id="file-hiding">File Hiding<a href="#file-hiding" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Despite the techniques outlined <a href="#process-hiding">above</a>, all the active PIDs on the system will still show up under <code>/proc/</code>. On top of this, the Drovorub malware also hides the userland executable component of itself, as explained in the <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF">report</a>. As mentioned earler, it takes a similar approach to what was done in <a href="../linux_rootkits_06">Part 6</a> except, while we hooked <code>sys_getdents64()</code> directly, Drovorub instead hooks <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/fs/dcache.c#L2317"><code>d_lookup()</code></a>, <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/fs/readdir.c#L40"><code>iterate_dir()</code></a> and, for kernel versions prior to 4.1, <code>vfs_readdir()</code>.</p>
+<p>Exactly why the Drovorub authors decided to hook <code>iterate_dir()</code> instead of <code>sys_getdents64()</code> is unclear, especially seeing as <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/fs/readdir.c#L351"><code>sys_getdents64()</code></a> uses <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/fs/readdir.c#L40"><code>iterate_dir()</code></a>, as you can see on <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/fs/readdir.c#L366">line 366</a>. Perhaps they opted to save on overhead - if you don&rsquo;t hook syscalls then you don&rsquo;t have to worry about multiple calling conventions brought about by the whole <code>pt_regs</code> change in kernel version 4.17 (see <a href="../linux_rootkits_02">Part 2</a> for more on that).</p>
+<p>Looking at <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/fs/readdir.c#L351"><code>sys_getdents64()</code></a>, we see that the syscall starts off by <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/fs/readdir.c#L362">calling <code>fdget_pos()</code></a> with the supplied file descriptor. This returns an <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/include/linux/file.h#L36"><code>fd</code> struct</a> which contains a <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/include/linux/fs.h#L916"><code>file</code> struct</a> as a subfield. This <code>file</code> struct <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/fs/readdir.c#L366">is now passed on</a> to <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/fs/readdir.c#L40"><code>iterate_dir()</code></a>. Taking a closer look at the <code>file</code> struct, we see that it has a <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/include/linux/path.h#L8"><code>path</code></a> struct field called <code>f_path</code>. Continuing down the rabbit hole, we see a <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/include/linux/dcache.h#L89"><code>dentry</code></a> struct, which we know all about from <a href="../linux_rootkits_06">Part 6</a>! A <code>dentry</code> struct contains a <code>d_name</code> object which is the name of the file!</p>
+<p>In all likelihood, Drovorub&rsquo;s <code>iterate_dir()</code> hook is first comparing <code>file-&gt;f_path.dentry-&gt;d_name</code> to either a pre-configured string or one instructed by the userspace component (see <a href="#communication-with-userspace">above</a>). If it gets a match, it likely just returns <code>0</code>, otherwise it can call the real <code>iterate_dir()</code>.</p>
+<blockquote>
+<p>There&rsquo;s one final caveat to all of this, as explained <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/fs/namei.c#L1420">here</a>. There is a function pointer called <code>lookup()</code> which is found deep within every <code>path</code> struct (<code>f_path.dentry-&gt;d_inode-&gt;i_op-&gt;lookup</code>). Drovorub also manages to hook this function, but to what end and precisely how this edge-case arises, I am not sure.</p>
+</blockquote>
+<h1 id="socket-hiding">Socket Hiding<a href="#socket-hiding" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>The final technique I want to discuss is the one that&rsquo;s perhaps open to the most conjecture. The <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF">official report</a> states that &ldquo;the Drovorub-kernel module hooks the appropriate kernel function and filters out the hidden sockets. It determines the function to hook by opening up the appropriate interface in the <code>/proc/net</code> directory in the proc file system&rdquo;. It goes on to explain the difference between the <code>tpc</code>, <code>tcp6</code>, <code>udp</code> and <code>udp6</code> &ldquo;files&rdquo; under <code>/proc/net/</code>.</p>
+<p>This doesn&rsquo;t make a whole lot of sense. We&rsquo;ve explored the <code>/proc/net/tcp</code> file before in <a href="../linux_rootkits_08">Part 8</a> and it doesn&rsquo;t contain and functions or function pointers. I suspect what the NSA/FBI meant by the statement above is that Drovorub hooks <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/net/ipv4/tcp_ipv4.c#L2610"><code>tcp4_seq_show()</code></a> <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/net/ipv6/tcp_ipv6.c#L2035"><code>tcp6_seq_show()</code></a>, <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/net/ipv4/udp.c#L2986"><code>udp4_seq_show()</code></a>, and <a href="https://github.com/torvalds/linux/blob/07e0887302450a62f51dba72df6afb5fabb23d1c/net/ipv6/udp.c#L1650"><code>udp6_seq_show()</code></a> (we only hooked <code>tcp4_seq_show()</code> back in <a href="../linux_rootkits_06">Part 6</a>). Clearly there is no &ldquo;appropriate interface&rdquo; to open from the <code>/proc/net</code> directory.</p>
+<p>In my opinion, I think it&rsquo;s very likely that Drovorub is using almost the exact same technique as was used in <a href="../linux_rootkits_06">Part 6</a> - except it has probably extended it to include the other 3 &ldquo;files&rdquo; <code>tcp6</code>, <code>udp4</code>, and <code>udp6</code> - <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF#%5B%7B%22num%22%3A86%2C%22gen%22%3A0%7D%2C%7B%22name%22%3A%22XYZ%22%7D%2C69%2C307%2C0%5D">&ldquo;Yara Rule #4&rdquo;</a> seems to indicate that this in indeed the case. One important difference is that the report specifies that Drovorub is capable of filtering connections not only based on source port (as we did), but also by destination port (i.e. it filters by <a href="https://github.com/torvalds/linux/blob/5fc6b075e165f641fbc366b58b578055762d5f8c/include/net/sock.h#L181"><code>skc_dport</code></a> as well as <a href="https://github.com/torvalds/linux/blob/5fc6b075e165f641fbc366b58b578055762d5f8c/include/net/sock.h#L182"><code>skc_num</code></a>).</p>
+<p>Another interesting ability is that Drovorub is can hide <em>any connections owned by a hidden process</em>. Using our trusty <code>strace</code>, we can take (yet another) look at <code>netstat</code>. If we run <code>netstat</code> as root, we get to see all the processes assigned to each connection (otherwise we can only see the processes owned by our user). Checking the output of <code>sudo strace -u root netstat -tunelp</code>, we see that it loops through <code>/proc/x/fd/y</code> for each PID <code>x</code> and file descriptor <code>y</code> in order to identify which process owns which entry in each of <code>tcp</code>, <code>tcp6</code>, <code>udp</code>, and <code>udp6</code>. This means that the ability to hide connections owned by a processe is already covered by hiding it&rsquo;s PID under <code>/proc/</code>!</p>
+<h1 id="things-left-unsaid">Thing&rsquo;s Left Unsaid<a href="#things-left-unsaid" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>One last thing that I&rsquo;d like to know more about, but the report fails to deliver on is the method by which Drovorub hides kernel modules. <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF#%5B%7B%22num%22%3A75%2C%22gen%22%3A0%7D%2C%7B%22name%22%3A%22XYZ%22%7D%2C69%2C160%2C0%5D">Table XIV</a> confirms that it can be instructed to hide modules (I assume by name), but that&rsquo;s all we get. Given what we already know, I think we can make a decent guess as to what they did.</p>
+<p>Taking a closer look at the wording of <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF#%5B%7B%22num%22%3A75%2C%22gen%22%3A0%7D%2C%7B%22name%22%3A%22XYZ%22%7D%2C69%2C160%2C0%5D">Table XIV</a>, we learn that the <code>hm</code> command will &ldquo;hide a module&rdquo;. The fact that it&rsquo;s <strong>a</strong> module and not <strong>the</strong> module indicates that Drovorub is capable of hiding more than just itself from module listings.</p>
+<p>In <a href="../linux_rootkits_05">Part 5</a>, we developed a method of hiding the rootkit module by fiddling with the linked list via the <code>THIS_MODULE</code> object. Practically, there are no reasons why this could not be extended to hide other modules - all the module would need to do is loop through the loaded kernel modules (easy enough thanks to the linked list!) and call <code>list_del()</code> on the ones that match some criteria - supposedly a successful <code>strcmp()</code> against the <code>.name</code> field of the module.</p>
+<p>The only slightly complicated bit would be keeping track of the pointers to the modules that you&rsquo;ve hidden because, as <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF#%5B%7B%22num%22%3A75%2C%22gen%22%3A0%7D%2C%7B%22name%22%3A%22XYZ%22%7D%2C69%2C160%2C0%5D">Table XIV</a> informs us, the <code>um</code> command will unhide a module. Whatever internal book-keeping device Drovorub uses, it needs to keep track of the names of the modules associated to the saved pointers to that the right modules go back in the right place as necessary. I find it surprising (as well as frustrating!) that such a significant part of Drovorub&rsquo;s functionality, with some potentially very interesting design choices, didn&rsquo;t make it into the report.</p>
+<h1 id="closing-remarks">Closing Remarks<a href="#closing-remarks" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>One of the things that stands out to me from reading through the <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF">report</a> is the focus on compatibility - beyond even what we attempted through the other posts in this series. Drovorub even goes as far as hooking kernel functions that are only present in kernel versions 2.6 and below (more than 12 years old at this point!). Does this tell us something about the intended targets?</p>
+<p>Where do we still see such early kernel versions? Collective wisdom tells us that the IoT and embedded world still sees frequent use of such antiquated kernels. While researching this post, I found a report from Fraunhofer released in June 2020 entitled <a href="https://www.fkie.fraunhofer.de/content/dam/fkie/de/documents/HomeRouter/HomeRouterSecurity_2020_Bericht.pdf">&ldquo;Home Router Security Report&rdquo;</a>. On Page 8 is a pie chart which indicates that 31.4% of the routers they surveyed are running Linux Kernel 2.6.36! Especially worrying is that kernel module signing wasn&rsquo;t implemented until kernel 3.7 - which would make mitigations against Drovorub extremely difficult.</p>
+<p>Something which may indicate that routers are not the sole intended target is the delivery mechanism for the kernel module component. The bottom of page 5 of the <a href="https://media.defense.gov/2020/Aug/13/2002476465/-1/-1/0/CSA_DROVORUB_RUSSIAN_GRU_MALWARE_AUG_2020.PDF">report</a> explains the usual kernel module loading methods for both Debian and Red Hat systems (<code>/etc/modules.conf</code>, etc). I find this interesting because it means that the kernel module itself must exist as a <code>.ko</code> file somewhere on the filesystem (even if it is hidden from directory listings once the module is loaded). The alternative to this would be loading the kernel module directly into memory (as was done in my <a href="../docker_escape">privileged docker escape</a> example) - although I hardcoded the kernel object as an array in the executable, there&rsquo;s no reason why this couldn&rsquo;t be delivered over the internet instead, thus leaving no remnant of the kernel module anywhere on the filesystem. The job of the forensic analyst is certainly made much easier by the approach taken by the Drovorub authors.</p>
+<p>Why does this indicate that embedded devices aren&rsquo;t the only target? In general, persistence on these kinds of devices is unnecessary (when was the last time you rebooted your router?). This still leaves servers as a possibility (sadly desktop Linux is still too small of a demograph to take seriously as a target), which I think makes the most sense. Perhaps both were the targets, or maybe the authors were just hedging their bets.</p>
+<p>I hope you enjoyed this run through as much I enjoyed writing it. I was surprised at how similar so many of the techniques employed by Drovorub were to those explored by previous posts in this series. It seems that, in many cases, being able to load a kernel module allows an attacker to run rampant on a Linux system with very little being able to stop them.</p>
+<p>Until next time&hellip;</p>
+<h1 id="disclaimer">Disclaimer<a href="#disclaimer" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>This post is totally educated guesswork. I have no affiliation with either the NSA, FBI, nor the GRU and I have not had the opportunity to examine the Drovorub malware. It was very deliberate that I didn&rsquo;t attempt to recreate any of the source code that I suspect the GRU may have used in their development of Drovorub. Please do not attempt this yourself either. My hope is that anyone who reads this post (or any other post on this blog) uses the information gained to better defend themselves and others from this kind of malware.</p>
+
+      </div></div>
+
+  
+  
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        
+        <span class="button next">
+            <a href="/posts/bleeding_tooth/">
+                <span class="button__text">Bleeding Tooth Deep Dive</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright copyright--user">
+        <span>Harvey Phillips 2020 - London, England</span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="/assets/main.js"></script>
+<script src="/assets/prism.js"></script>
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>

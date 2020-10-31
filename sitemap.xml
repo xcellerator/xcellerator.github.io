@@ -3,6 +3,56 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>/categories/</loc>
+    <lastmod>2020-10-29T12:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/drovorub/</loc>
+    <lastmod>2020-10-29T12:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/fancy-bear/</loc>
+    <lastmod>2020-10-29T12:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/posts/linux_rootkits_10/</loc>
+    <lastmod>2020-10-29T12:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/linux/</loc>
+    <lastmod>2020-10-29T12:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/categories/linux/</loc>
+    <lastmod>2020-10-29T12:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/posts/</loc>
+    <lastmod>2020-10-29T12:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/rootkit/</loc>
+    <lastmod>2020-10-29T12:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/</loc>
+    <lastmod>2020-10-29T12:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/</loc>
+    <lastmod>2020-10-29T12:00:00+01:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/posts/bleeding_tooth/</loc>
     <lastmod>2020-10-17T15:00:00+01:00</lastmod>
   </url>
@@ -18,42 +68,12 @@
   </url>
   
   <url>
-    <loc>/categories/</loc>
-    <lastmod>2020-10-17T15:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
     <loc>/tags/information-leak/</loc>
     <lastmod>2020-10-17T15:00:00+01:00</lastmod>
   </url>
   
   <url>
-    <loc>/tags/linux/</loc>
-    <lastmod>2020-10-17T15:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/categories/linux/</loc>
-    <lastmod>2020-10-17T15:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/posts/</loc>
-    <lastmod>2020-10-17T15:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
     <loc>/categories/reverse_engineering/</loc>
-    <lastmod>2020-10-17T15:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/</loc>
-    <lastmod>2020-10-17T15:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/</loc>
     <lastmod>2020-10-17T15:00:00+01:00</lastmod>
   </url>
   
@@ -64,11 +84,6 @@
   
   <url>
     <loc>/tags/logged-in/</loc>
-    <lastmod>2020-10-16T12:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/rootkit/</loc>
     <lastmod>2020-10-16T12:00:00+01:00</lastmod>
   </url>
   
