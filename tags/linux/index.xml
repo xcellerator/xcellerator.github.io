@@ -118,7 +118,7 @@ Luckily for us, there is already a great list of potential targets: syscalls! Sy
     </item>
     
     <item>
-      <title>Linux Rootkits Part 1: Introduction and Worflow</title>
+      <title>Linux Rootkits Part 1: Introduction and Workflow</title>
       <link>/posts/linux_rootkits_01/</link>
       <pubDate>Tue, 25 Aug 2020 21:00:00 +0100</pubDate>
       
