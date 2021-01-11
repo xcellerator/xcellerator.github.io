@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>kernel 5.7 on TheXcellerator</title>
+    <link>/tags/kernel-5.7/</link>
+    <description>Recent content in kernel 5.7 on TheXcellerator</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>Harvey Phillips 2020 - London, England</copyright>
+    <lastBuildDate>Mon, 11 Jan 2021 17:00:00 +0000</lastBuildDate><atom:link href="/tags/kernel-5.7/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Linux Rootkits: New Methods for Kernel 5.7&#43;</title>
+      <link>/posts/linux_rootkits_11/</link>
+      <pubDate>Mon, 11 Jan 2021 17:00:00 +0000</pubDate>
+      
+      <guid>/posts/linux_rootkits_11/</guid>
+      <description>What&amp;rsquo;s Going On? Back in February 2020, there were some stirrings on the LKML about unexporting kallsyms_lookup_name() from the kernel. The main reason for this is that unscrupulous module developers will often simply add MODULE_LICENSE(&#39;GPL&#39;) to their code (without actually licensing their module as such). Then, using kallsyms_lookup_name(), they can use any other exported kernel function to their heart&amp;rsquo;s content. The kernel developers don&amp;rsquo;t like this because it enables out-of-tree modules to call non-exported functions.</description>
+    </item>
+    
+  </channel>
+</rss>

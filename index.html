@@ -149,6 +149,47 @@
   
   <div class="post on-list">
     <h1 class="post-title">
+      <a href="/posts/linux_rootkits_11/">Linux Rootkits: New Methods for Kernel 5.7+</a></h1>
+    <div class="post-meta">
+      <span class="post-date">
+        2021-01-11
+      </span>
+      <span class="post-author">::
+        TheXcellerator</span>
+    </div>
+
+    
+    <span class="post-tags">
+      
+      #<a href="/tags/linux/">linux</a>&nbsp;
+      
+      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
+      
+      #<a href="/tags/kernel-5.7/">kernel 5.7</a>&nbsp;
+      
+    </span>
+    
+
+    
+
+    <div class="post-content">
+      
+      
+      What’s Going On? Back in February 2020, there were some stirrings on the LKML about unexporting kallsyms_lookup_name() from the kernel. The main reason for this is that unscrupulous module developers will often simply add MODULE_LICENSE(&lsquo;GPL&rsquo;) to their code (without actually licensing their module as such). Then, using kallsyms_lookup_name(), they can use any other exported kernel function to their heart’s content. The kernel developers don’t like this because it enables out-of-tree modules to call non-exported functions.
+      
+      
+    </div>
+
+    
+    <div>
+      <a class="read-more button"
+        href="/posts/linux_rootkits_11/">Read more →</a>
+    </div>
+    
+  </div>
+  
+  <div class="post on-list">
+    <h1 class="post-title">
       <a href="/posts/linux_rootkits_10/">Fancy Bear&rsquo;s a Lumberjack and It&rsquo;s Okay - A Dive into the Kernel Component of Drovorub</a></h1>
     <div class="post-meta">
       <span class="post-date">
@@ -548,50 +589,6 @@ Char Devices in Linux Although you might not recognise the name, you’re probab
     <div>
       <a class="read-more button"
         href="/posts/linux_rootkits_04/">Read more →</a>
-    </div>
-    
-  </div>
-  
-  <div class="post on-list">
-    <h1 class="post-title">
-      <a href="/posts/linux_rootkits_03/">Linux Rootkits Part 3: A Backdoor to Root</a></h1>
-    <div class="post-meta">
-      <span class="post-date">
-        2020-08-29
-      </span>
-      <span class="post-author">::
-        TheXcellerator</span>
-    </div>
-
-    
-    <span class="post-tags">
-      
-      #<a href="/tags/linux/">linux</a>&nbsp;
-      
-      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
-      
-      #<a href="/tags/root/">root</a>&nbsp;
-      
-      #<a href="/tags/backdoor/">backdoor</a>&nbsp;
-      
-    </span>
-    
-
-    
-
-    <div class="post-content">
-      
-      
-      Now that you know how to make a Linux kernel module that can hook any exposed function in kernel memory (Part 1 and Part 2), let’s get down to writing a hook that does something interesting!
-In this first example, we’re going to make a rootkit that intercepts calls to sys_kill. 99% of the time, we only use sys_kill (the userspace tool we normally use is the familiar kill) to kill a process, i.
-      
-      
-    </div>
-
-    
-    <div>
-      <a class="read-more button"
-        href="/posts/linux_rootkits_03/">Read more →</a>
     </div>
     
   </div>

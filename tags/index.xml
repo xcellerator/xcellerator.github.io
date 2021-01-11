@@ -7,7 +7,34 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Thu, 29 Oct 2020 12:00:00 +0100</lastBuildDate><atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 11 Jan 2021 17:00:00 +0000</lastBuildDate><atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>kernel 5.7</title>
+      <link>/tags/kernel-5.7/</link>
+      <pubDate>Mon, 11 Jan 2021 17:00:00 +0000</pubDate>
+      
+      <guid>/tags/kernel-5.7/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>linux</title>
+      <link>/tags/linux/</link>
+      <pubDate>Mon, 11 Jan 2021 17:00:00 +0000</pubDate>
+      
+      <guid>/tags/linux/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>rootkit</title>
+      <link>/tags/rootkit/</link>
+      <pubDate>Mon, 11 Jan 2021 17:00:00 +0000</pubDate>
+      
+      <guid>/tags/rootkit/</guid>
+      <description></description>
+    </item>
+    
     <item>
       <title>drovorub</title>
       <link>/tags/drovorub/</link>
@@ -23,24 +50,6 @@
       <pubDate>Thu, 29 Oct 2020 12:00:00 +0100</pubDate>
       
       <guid>/tags/fancy-bear/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>linux</title>
-      <link>/tags/linux/</link>
-      <pubDate>Thu, 29 Oct 2020 12:00:00 +0100</pubDate>
-      
-      <guid>/tags/linux/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>rootkit</title>
-      <link>/tags/rootkit/</link>
-      <pubDate>Thu, 29 Oct 2020 12:00:00 +0100</pubDate>
-      
-      <guid>/tags/rootkit/</guid>
       <description></description>
     </item>
     

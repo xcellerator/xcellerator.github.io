@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>Linux Rootkits: New Methods for Kernel 5.7&#43; :: TheXcellerator</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="description" content="What&amp;rsquo;s Going On? Back in February 2020, there were some stirrings on the LKML about unexporting kallsyms_lookup_name() from the kernel. The main reason for this is that unscrupulous module developers will often simply add MODULE_LICENSE(&#39;GPL&#39;) to their code (without actually licensing their module as such). Then, using kallsyms_lookup_name(), they can use any other exported kernel function to their heart&amp;rsquo;s content. The kernel developers don&amp;rsquo;t like this because it enables out-of-tree modules to call non-exported functions." />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="/posts/linux_rootkits_11/" />
+
+
+
+
+<link rel="stylesheet" href="/assets/style.css">
+
+  <link rel="stylesheet" href="/assets/blue.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/img/apple-touch-icon-144-precomposed.png">
+
+  <link rel="shortcut icon" href="/img/favicon/blue.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+<meta name="twitter:creator" content="TheXcellerator" />
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Linux Rootkits: New Methods for Kernel 5.7&#43; :: TheXcellerator">
+<meta property="og:description" content="What&amp;rsquo;s Going On? Back in February 2020, there were some stirrings on the LKML about unexporting kallsyms_lookup_name() from the kernel. The main reason for this is that unscrupulous module developers will often simply add MODULE_LICENSE(&#39;GPL&#39;) to their code (without actually licensing their module as such). Then, using kallsyms_lookup_name(), they can use any other exported kernel function to their heart&amp;rsquo;s content. The kernel developers don&amp;rsquo;t like this because it enables out-of-tree modules to call non-exported functions." />
+<meta property="og:url" content="/posts/linux_rootkits_11/" />
+<meta property="og:site_name" content="Linux Rootkits: New Methods for Kernel 5.7&#43;" />
+
+  
+    <meta property="og:image" content="/img/favicon/blue.png">
+  
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+  <meta property="article:section" content="linux" />
+
+
+  <meta property="article:published_time" content="2021-01-11 17:00:00 &#43;0000 GMT" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="">
+
+
+<div class="container center headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    TheXcellerator
+  </div>
+</a>
+
+    </div>
+    <div class="menu-trigger">menu</div>
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/categories/cryptography/">Cryptography</a></li>
+        
+      
+        
+          <li><a href="/categories/linux/">Linux</a></li>
+        
+      
+        
+          <li><a href="/categories/other/">Other</a></li>
+        
+      
+        
+          <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/categories/cryptography/">Cryptography</a></li>
+      
+    
+      
+        <li><a href="/categories/linux/">Linux</a></li>
+      
+    
+      
+        <li><a href="/categories/other/">Other</a></li>
+      
+    
+      
+        <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="/posts/linux_rootkits_11/">Linux Rootkits: New Methods for Kernel 5.7+</a></h1>
+  <div class="post-meta">
+      
+    <span class="post-date">
+      2021-01-11
+    </span>
+    
+    
+    <span class="post-author">::
+      TheXcellerator
+    </span>
+    
+  </div>
+
+  
+  <span class="post-tags">
+    
+    #<a href="/tags/linux/">linux</a>&nbsp;
+    
+    #<a href="/tags/rootkit/">rootkit</a>&nbsp;
+    
+    #<a href="/tags/kernel-5.7/">kernel 5.7</a>&nbsp;
+    
+  </span>
+  
+
+  
+
+  <div class="post-content"><div>
+        <h1 id="whats-going-on">What&rsquo;s Going On?<a href="#whats-going-on" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Back in February 2020, there were some stirrings on the <a href="https://lkml.org/lkml/2020/2/25/576">LKML</a> about unexporting <code>kallsyms_lookup_name()</code> from the kernel. The main reason for this is that unscrupulous module developers will often simply add <code>MODULE_LICENSE('GPL')</code> to their code (without actually licensing their module as such). Then, using <code>kallsyms_lookup_name()</code>, they can use any other exported kernel function to their heart&rsquo;s content. The kernel developers don&rsquo;t like this because it enables out-of-tree modules to call non-exported functions.</p>
+<p>Clearly, this is a problem for us! In particular, <code>ftrace_helper.h</code> uses <code>kallsyms_lookup_name()</code> to get the address of functions that we want to hook. Indeed, as of kernel version 5.7, we can no longer use this function anymore (<a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=0bd476e6c67190b5eb7b6e105c8db8ff61103281">diff</a>).</p>
+<p>Along with this change, there are a couple of other changes to the procfs system that came with the release of version 5.6. While these fixes are relatively minor, there&rsquo;s a bit more work to be done in order to get <code>ftrace_helper.h</code> working on newer kernels.</p>
+<blockquote>
+<p>It&rsquo;s worth noting that, as of writing, the latest kernel available for Ubuntu 20.04 is <code>5.4.0-60-generic</code>, so these changes won&rsquo;t actually affect you yet if you&rsquo;re on an LTS. But it&rsquo;s nice to be ahead of the curve!</p>
+</blockquote>
+<h1 id="procfs-changes">ProcFS Changes<a href="#procfs-changes" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Let&rsquo;s deal with the changes to <code>proc_create()</code> first. This is a pretty simple fix, but illustrates a nice method for handling such changes, without breaking existing support. Looking at the declaration in <a href="https://elixir.bootlin.com/linux/v5.5.19/source/include/linux/proc_fs.h#L49">v5.5.19</a>, we see:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> proc_dir_entry <span style="color:#f92672">*</span><span style="color:#a6e22e">proc_create</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>name, 
+        umode_t mode, 
+        <span style="color:#66d9ef">struct</span> proc_dir_entry <span style="color:#f92672">*</span>parent, 
+        <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> file_operations <span style="color:#f92672">*</span>proc_fops);
+</code></pre></div><p>This declaration is what we made use of in <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/5f3a511e0983645968a210e8ba8447315c52d90a/3_RootkitTechniques/3.8_privileged_container_escaping/escape.c#L205"><code>escape.c</code></a> from <a href="../docker_escape">Privileged Container Escapes with Kernel Modules</a>. However, as of version 5.6, <code>proc_create()</code> now looks like <a href="https://elixir.bootlin.com/linux/v5.6/source/include/linux/proc_fs.h#L64">this</a>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> proc_dir_entry <span style="color:#f92672">*</span><span style="color:#a6e22e">proc_create</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>name, 
+        umode_t mode, 
+        <span style="color:#66d9ef">struct</span> proc_dir_entry <span style="color:#f92672">*</span>parent, 
+        <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> proc_ops <span style="color:#f92672">*</span>proc_ops);
+</code></pre></div><p>Notice that the final argument has changed from a <a href="https://elixir.bootlin.com/linux/v5.5.19/source/include/linux/fs.h#L1822"><code>file_operations</code></a> struct to a <a href="https://elixir.bootlin.com/linux/v5.6/source/include/linux/proc_fs.h#L15"><code>proc_ops</code></a> struct? We need to account for this change in our code. There are two main differences between these structs that we care about:</p>
+<ul>
+<li>There is no longer a <code>.owner</code> field in <code>proc_ops</code></li>
+<li>The <code>.read</code> / <code>.write</code> fields for the IO handlers are now called <code>.proc_read</code> / <code>.proc_write</code> respectively</li>
+</ul>
+<p>So, what&rsquo;s the best way to handle these changes? With the preprocessor! In particular, <code>&lt;linux/version.h&gt;</code> provides us with the <code>LINUX_VERSION_CODE</code> and <code>KERNEL_VERSION</code> macros. These let us implement these changes very simply:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#if LINUX_VERSION_CODE &gt;= KERNEL_VERSION(5,6,0)
+</span><span style="color:#75715e"></span><span style="color:#75715e">// proc_ops version
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> proc_ops proc_file_fops_escape <span style="color:#f92672">=</span> {
+    .proc_write <span style="color:#f92672">=</span> escape_write,
+};
+
+<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> proc_ops proc_file_fops_output <span style="color:#f92672">=</span> {
+    .proc_write <span style="color:#f92672">=</span> output_write,
+    .proc_read <span style="color:#f92672">=</span> output_read,
+};
+<span style="color:#75715e">#else
+</span><span style="color:#75715e"></span><span style="color:#75715e">// file_operations version
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> file_operations proc_file_fops_escape <span style="color:#f92672">=</span> {
+    .owner <span style="color:#f92672">=</span> THIS_MODULE,
+    .write <span style="color:#f92672">=</span> escape_write,
+};
+
+<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> file_operations proc_file_fops_output <span style="color:#f92672">=</span> {
+    .owner <span style="color:#f92672">=</span> THIS_MODULE,
+    .write <span style="color:#f92672">=</span> output_write,
+    .read <span style="color:#f92672">=</span> output_read,
+};
+<span style="color:#75715e">#endif
+</span></code></pre></div><p>And with that, the first problem is solved! The docker escape now compiles on <code>5.10.6-arch1-1</code> and works as expected. The same code still compiles on <code>5.4.0-60-generic</code> on Ubuntu 20.04.</p>
+<blockquote>
+<p>This fix has been merged into the repo. You can see the change mentioned above <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/7e063f7d7da9190622f488b0e0345c0e57436586/3_RootkitTechniques/3.8_privileged_container_escaping/escape.c#L182">here</a>.</p>
+</blockquote>
+<h1 id="the-kallsyms-problem">The Kallsyms Problem<a href="#the-kallsyms-problem" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Now, we come to a slightly more difficult problem. Without <code>kallsyms_lookup_name()</code>, we can&rsquo;t easily resolve a symbol name to a memory address, which means we can&rsquo;t hook functions with ftrace (recall that we use ftrace to register callbacks that are triggered when <code>$rip</code> equals the memory address of the function we want to hook).</p>
+<p>My original idea was to look for a different kernel function (which <em>is</em> still exported) that could be used to inadvertently resolve symbol names. I settled on <code>sprint_symbol()</code> which does the <em>opposite</em> of <code>kallsyms_lookup_name()</code>, i.e. given a memory address, it returns the name of the function at that address.</p>
+<p>Using this, I decided to just loop over addresses from the base address up, calling <code>sprint_symbol()</code> each time and <code>strncmp()</code>ing until I found that function I wanted. While slightly inelegant, it worked surprisingly well. It looked something like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/*
+</span><span style="color:#75715e"> * kaddr is an unsigned long which holds the memory address being looped over
+</span><span style="color:#75715e"> * fname_lookup is a kernel buffer which stores the name of the function at kaddr
+</span><span style="color:#75715e"> * fname is a kernel buffer storing the function we&#39;re searching for
+</span><span style="color:#75715e"> */</span>
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e"> * Trick to get the kernel base address
+</span><span style="color:#75715e"> * sprint_symbol() is less than 0x100000 bytes from the base address, so
+</span><span style="color:#75715e"> * we can just AND-out the last 3 bytes from it&#39;s address to obtain the address
+</span><span style="color:#75715e"> * of startup_64 (the kernel load address)
+</span><span style="color:#75715e"> */</span>
+kaddr <span style="color:#f92672">=</span> (<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span>) <span style="color:#f92672">&amp;</span>sprint_symbol;
+kaddr <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;=</span> <span style="color:#ae81ff">0xffffffffff000000</span>;
+
+<span style="color:#75715e">/* During testing, all the interesting functions were found below this limit */</span>
+<span style="color:#66d9ef">for</span> ( i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span> ; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x100000</span> ; i<span style="color:#f92672">++</span> )
+{
+    sprint_symbol(fname_lookup, kaddr);
+
+    <span style="color:#66d9ef">if</span> (strncmp(fname_lookup, fname, strlen(fname)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)
+    {
+        <span style="color:#75715e">/* Match! Clean up and exit */</span>
+        kfree(fname_lookup);
+        <span style="color:#66d9ef">return</span> kaddr;
+    }
+
+    <span style="color:#75715e">/* Kernel function addresses are all aligned, so we skip 0x10 bytes */</span>
+    kaddr <span style="color:#f92672">+=</span> <span style="color:#ae81ff">0x10</span>;
+}
+kfree(fname_lookup);
+</code></pre></div><p>If I didn&rsquo;t end up using this technique, why have I bothered to tell you about it? For two reasons; first is to illustrate that there is always more than one way to skin a cat. Second is because of the trick I used above to get the kernel base address. The problem that I faced was how to know where to start brute-forcing from. The address that the kernel is loaded from is called <code>startup_64</code> (you can find it in <code>/proc/kallsyms</code>), but kernel address space layout randomization means that this address will change at every boot. However, even though we can&rsquo;t use <code>kallsyms_lookup_name()</code>, we can still get the address of any <em>exported</em> kernel function by using the <code>&amp;</code> operator.</p>
+<p>If you check the address of <code>sprint_symbol</code> and <code>startup_64</code> on your system, you&rsquo;ll notice that only the last 3 bytes are different. This is because <code>sprint_symbol</code> is less than <code>0x100000</code> bytes from the beginning of the kernel. That difference does <em>not</em> change between reboots. Therefore, we can just drop those last three bytes and we get the base address! Although it&rsquo;s already in the snippet above, I&rsquo;ll lay it out here again because I think it&rsquo;s pretty cool:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/* Get the address of sprint_symbol() */</span>
+kaddr <span style="color:#f92672">=</span> (<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span>) <span style="color:#f92672">&amp;</span>sprint_symbol;
+
+<span style="color:#75715e">/* Set the last 3 bytes of the address to 0x00 */</span>
+kaddr <span style="color:#f92672">&amp;=</span> <span style="color:#ae81ff">0xffffffffff000000</span>;
+</code></pre></div><p>While I was working on refining this technique, <a href="https://twitter.com/f0lg0">@f0lg0</a> opened an issue on GitHub bringing up exactly this problem, and <a href="https://github.com/xcellerator/linux_kernel_hacking/issues/3#issue-782815541">proposed a cool technique</a> that used kprobes instead.</p>
+<p>The <a href="https://www.kernel.org/doc/html/latest/trace/kprobes.html">Kprobe</a> system lets you dynamically insert breakpoints into a running kernel. All we&rsquo;re going to use it for is to do the job of <code>kallsyms_lookup_name()</code> to lookup itself!</p>
+<p>After a bit of back-and-forth, they came up with a <a href="https://github.com/xcellerator/linux_kernel_hacking/issues/3#issuecomment-757951117">a very neat solution</a> to the problem. Their code in that comment illustrates the main idea really well. We simply declare a <code>kprobe</code> struct with the <code>.symbol_name</code> field preset to <code>kallsyms_lookup_name</code>. Once the kprobe is registered, we can dereference the <code>.addr</code> field to obtain the memory address!</p>
+<p>In order to implement this technique effectively and neatly, I wanted all the changes to be in <code>ftrace_helper.h</code> only. The trick here is to use the macros provided by <code>&lt;linux/version.h&gt;</code> as mentioned above, to check the kernel version, and then resolve <code>kallsyms_lookup_name()</code> manually before using it as we would normally.</p>
+<p>Initially, we just include <code>&lt;linux/kprobes.h&gt;</code> and declare the <code>kprobe</code> struct: (see it in place <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/7e063f7d7da9190622f488b0e0345c0e57436586/3_RootkitTechniques/3.3_set_root/ftrace_helper.h#L17">here</a>):</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#if LINUX_VERSION_CODE &gt;= KERNEL_VERSION(5,7,0)
+</span><span style="color:#75715e">#define KPROBE_LOOKUP 1
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/kprobes.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">struct</span> kprobe kp <span style="color:#f92672">=</span> {
+    .symbol_name <span style="color:#e6db74">&#34;kallsyms_lookup_name&#34;</span>
+};
+<span style="color:#75715e">#endif
+</span></code></pre></div><p>With that in-place, before we attempt to use <code>kallsyms_lookup_name()</code>, we just add the following snippet. All that needs to be done is register the kprobe, assign the <code>.addr</code> field to a symbol called <code>kallsyms_lookup_name</code> (after appropriately casting it), and then unregister the kprobe once we&rsquo;re done (see it in place <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/7e063f7d7da9190622f488b0e0345c0e57436586/3_RootkitTechniques/3.3_set_root/ftrace_helper.h#L70">here</a>).</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#ifdef KPROBE_LOOKUP
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">/* typedef for kallsyms_lookup_name() so we can easily cast kp.addr */</span>
+    <span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">unsigned</span> <span style="color:#a6e22e">long</span> (<span style="color:#f92672">*</span>kallsyms_lookup_name_t)(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>name);
+    kallsyms_lookup_name_t kallsyms_lookup_name;
+
+    <span style="color:#75715e">/* register the kprobe */</span>
+    register_kprobe(<span style="color:#f92672">&amp;</span>kp);
+
+    <span style="color:#75715e">/* assign kallsyms_lookup_name symbol to kp.addr */</span>
+    kallsyms_lookup_name (kallsyms_lookup_name_t) kp.addr;
+
+    <span style="color:#75715e">/* done with the kprobe, so unregister it */</span>
+    uregister_kprobe(<span style="color:#f92672">&amp;</span>kp);
+<span style="color:#75715e">#endif
+</span></code></pre></div><p>Of course, if we&rsquo;re not compiling on kernel 5.7+, then none of this will trigger and <code>kallsyms_lookup_name()</code> will be resolved by the kernel headers (as has been the case before now). This way, we don&rsquo;t have to make any changes to existing code in <code>ftrace_helper.h</code> - and kernel versions prior to 5.7 are unaffected!</p>
+<h1 id="the-syscall-name-problem">The Syscall Name Problem<a href="#the-syscall-name-problem" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Finally, there is another small patch which fixes something that&rsquo;s been bothering me. Despite sharing the same name, there were actually two slightly different <code>ftrace_helper.h</code> files in the repo. The reason is that I was using a macro to add <code>__x64_</code> to syscall names, but the problem is that there isn&rsquo;t an easy way (that I know of) to only add <code>__x64_</code> to strings that start with <code>sys_</code>. To solve this, I had simply removed the corresponding macro from <code>ftrace_helper.h</code> when I wasn&rsquo;t hooking a syscall.</p>
+<p>This is very inelegant, so I instead decided to remove the macro altogether, and simply manually add <code>__x64_</code> to any <code>rootkit.c</code>s that hook syscalls. The downside is that 32-bit kernels are no longer supported automically (you&rsquo;d have to remove <code>__x64_</code> from the <code>HOOK()</code> macro in <code>rootkit.c</code> and recompile), but 32-bit isn&rsquo;t too much of a concern nowadays (I haven&rsquo;t actually tested <em>anything</em> on 32-bit, so I don&rsquo;t even know which modules are broken and which work!).</p>
+<h1 id="and-with-that">And with that&hellip;<a href="#and-with-that" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Now the rootkit techniques on the <a href="https://github.com/xcellerator/linux_kernel_hacking">repo</a> work with the latest kernel! Thanks again to <a href="https://twitter.com/f0lg0">@f0lg0</a> for their idea to use kprobes to resolve <code>kallsyms_lookup_name()</code> - definitely neater than brute-forcing the address.</p>
+<p>Until next time&hellip;</p>
+
+      </div></div>
+
+  
+  
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        
+        <span class="button next">
+            <a href="/posts/linux_rootkits_10/">
+                <span class="button__text">Fancy Bear&#39;s a Lumberjack and It&#39;s Okay - A Dive into the Kernel Component of Drovorub</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright copyright--user">
+        <span>Harvey Phillips 2020 - London, England</span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="/assets/main.js"></script>
+<script src="/assets/prism.js"></script>
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>
