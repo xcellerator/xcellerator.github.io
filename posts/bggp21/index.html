@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>Janus: A Polyglot Binary for BGGP 2021 :: TheXcellerator</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="description" content="This year, @netspooky announced another round of the Binary Golf Grand Prix. If you missed it last year, the challenge was to create a palindromic binary - you can see the writeup of my entry, BootNoodle, here. This time around, the theme was polyglots, i.e. the challenge was to create a binary (as small as possible - hence the Golf part&amp;hellip;) that was simulateously another filetype.
+The rules were laid out very clearly into 2 categories: first - the smallest file that satisfied all the rules wins; second - rack up points by overlapping more and more filetypes with the bytes of your host binary." />
+<meta name="keywords" content="" />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="/posts/bggp21/" />
+
+
+
+
+<link rel="stylesheet" href="/assets/style.css">
+
+  <link rel="stylesheet" href="/assets/blue.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/img/apple-touch-icon-144-precomposed.png">
+
+  <link rel="shortcut icon" href="/img/favicon/blue.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+<meta name="twitter:creator" content="" />
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Janus: A Polyglot Binary for BGGP 2021 :: TheXcellerator">
+<meta property="og:description" content="This year, @netspooky announced another round of the Binary Golf Grand Prix. If you missed it last year, the challenge was to create a palindromic binary - you can see the writeup of my entry, BootNoodle, here. This time around, the theme was polyglots, i.e. the challenge was to create a binary (as small as possible - hence the Golf part&amp;hellip;) that was simulateously another filetype.
+The rules were laid out very clearly into 2 categories: first - the smallest file that satisfied all the rules wins; second - rack up points by overlapping more and more filetypes with the bytes of your host binary." />
+<meta property="og:url" content="/posts/bggp21/" />
+<meta property="og:site_name" content="Janus: A Polyglot Binary for BGGP 2021" />
+
+  
+    <meta property="og:image" content="/img/favicon/blue.png">
+  
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+  <meta property="article:section" content="reverse_engineering" />
+
+  <meta property="article:section" content="other" />
+
+
+  <meta property="article:published_time" content="2021-09-16 12:00:00 &#43;0100 BST" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="">
+
+
+<div class="container center headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    TheXcellerator
+  </div>
+</a>
+
+    </div>
+    <div class="menu-trigger">menu</div>
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/categories/cryptography/">Cryptography</a></li>
+        
+      
+        
+          <li><a href="/categories/linux/">Linux</a></li>
+        
+      
+        
+          <li><a href="/categories/other/">Other</a></li>
+        
+      
+        
+          <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/categories/cryptography/">Cryptography</a></li>
+      
+    
+      
+        <li><a href="/categories/linux/">Linux</a></li>
+      
+    
+      
+        <li><a href="/categories/other/">Other</a></li>
+      
+    
+      
+        <li><a href="/categories/reverse_engineering/">Reverse Engineering</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="/posts/bggp21/">Janus: A Polyglot Binary for BGGP 2021</a></h1>
+  <div class="post-meta">
+      
+    <span class="post-date">
+      2021-09-16
+    </span>
+    
+    
+  </div>
+
+  
+
+  
+
+  <div class="post-content"><div>
+        <p>This year, <a href="https://twitter.com/netspooky">@netspooky</a> announced another round of the <a href="https://twitter.com/netspooky/status/1405860275392335879">Binary Golf Grand Prix</a>. If you missed it last year, the challenge was to create a <em>palindromic</em> binary - you can see the writeup of my entry, BootNoodle, <a href="../bggp/">here</a>. This time around, the theme was <em>polyglots</em>, i.e. the challenge was to create a binary (as small as possible - hence the <em>Golf</em> part&hellip;) that was simulateously another filetype.</p>
+<p>The <a href="https://n0.lol/bggp/2021/">rules were laid out</a> very clearly into 2 categories: first - the smallest file that satisfied all the rules wins; second - rack up points by overlapping more and more filetypes with the bytes of your host binary. I felt more attracted to the second category due to the possibility of getting creative with fileformats and parsers.</p>
+<h1 id="the-result">The Result<a href="#the-result" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>I went into this having never created a polyglot before. The closest I&rsquo;d been to them is <a href="https://twitter.com/angealbertini">Ange Albertini&rsquo;s</a> brilliant collection of articles in PoC||GTFO. However, theory and practice are very different things, so it took me a while to get things going.</p>
+<p>Ultimately, I ended up with a 512-byte file that is simultaneously an x86 bootloader, COM executable, ELF, ZIP, RAR, GNU Multiboot2 Image <em>and</em> Commodore 64 PRG executable named <code>janus.com</code>. You can find the completed file (and NASM source) on <a href="https://github.com/xcellerator/janus">Github</a>.</p>
+<p><img src="../../img/janus.png" alt="Janus" title="Janus"></p>
+<h1 id="x86-bootloader">x86 Bootloader<a href="#x86-bootloader" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>For the &ldquo;host binary&rdquo;, I chose to go with an x86 bootloader again (as I did last year). I did this for two reasons: 1, they&rsquo;re essentially structureless (apart from <code>55 AA</code> in bytes 511 and 512) and 2, it gave me a nice limitation of 512 bytes to work with. Even for category 2, the <a href="https://n0.lol/bggp/2021/">rules</a> mandated that entries be kept under 4kb. This left me with a well-defined problem to see how many filetypes I could cram into 512 bytes.</p>
+<p>The main thing to know about bootloaders, is that (as long as aforementioned <code>55 AA</code> appears at the end), execution will <em>always</em> begin at offset <code>0</code>. In other words, the initial bytes of <code>janus.com</code> <em>must</em> be executable as 16-bit x86 opcodes. We&rsquo;ll need to keep this in mind if we want to incorporate a filetype that has a hard requirement at the beginning of the file (e.g. an <a href="#elf">ELF</a>).</p>
+<p>I decided to have the bootloader simply print a string to the screen. The actual opcodes don&rsquo;t take up much room; all they really do is setup registers and call BIOS routines via interrupts. What&rsquo;s more important is the string that is printed. In general, code is small, data is big. For any other filetypes that I manage to incorporate into these 512 bytes, I want to reuse the string that&rsquo;s already going to be present in this binary. That way, I &ldquo;only&rdquo; have to worry about structures and instructions, rather than having to squeeze in more data.</p>
+<blockquote>
+<p>For more info on 16-bit assembly, checkout my BGGP entry from last year: <a href="../bggp">BootNoodle</a>.</p>
+</blockquote>
+<p>Put simply, the bootloader will move the cursor to the top-left of the screen, change the foreground colour to cyan (because why not?) and print the string &ldquo;BGGP 2021 GOT ME THINKING STRANGE - xcellerator&rdquo;.</p>
+<p>To test the bootloader, simply run <code>qemu-system-x86_64 janus.com</code>.</p>
+<h1 id="com">COM<a href="#com" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Fortunately, bootloaders and COM files have a lot in common. You could almost say they&rsquo;re the same file format. Which is funny, because they actually are the same file format (except you don&rsquo;t need the <code>55 AA</code> at the end). COM files are just pure opcodes/data without any real structure to them other than execution starting at offset <code>0x0</code>.</p>
+<p>So what&rsquo;s there to actually <em>do</em>? Well, in order to print our string to the screen, we were using a BIOS routine in interrupt <code>0x10</code> to write bytes to page <code>0</code> of memory. DOS has a different memory layout, and the DOS equivalent of <code>STDOUT</code> doesn&rsquo;t correspond to page <code>0</code>, so this interrupt <em>appears</em> to have no effect and the string isn&rsquo;t printed. If we want to print a string in DOS, we can use a different routine from the DOS interrupt <code>0x21</code>. The cool thing is that this interrupt isn&rsquo;t mapped to anything in BIOS-mode, so we can just write our <code>printString</code> routine to use interrupt <code>0x21</code> first, and then interrupt <code>0x10</code>. If we&rsquo;re running in the BIOS, only the latter will do anything, and if we&rsquo;re running in DOS, only for former has any (visual) effect!</p>
+<p>The other thing we have to keep in mind is that strings are <code>$</code>-terminated in DOS, so we have to slap another character onto the end of our string. This won&rsquo;t affect the ELF/ZIP/Bootloader/PRG output because we can set string length for all of those. Unfortunately we don&rsquo;t have the same luxury with RAR and can&rsquo;t have a random <code>$</code> which doesn&rsquo;t do anything - that&rsquo;s why the <code>$</code> appears only in the RAR output.</p>
+<p>Ultimately, the <code>printString</code> routine at offset <code>0x8a</code> looks like this:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-nasm" data-lang="nasm"><span style="color:#75715e">; DOS Version</span>
+<span style="color:#a6e22e">push</span> cs         <span style="color:#75715e">; Set CS=DS</span>
+<span style="color:#a6e22e">pop</span> ds
+<span style="color:#a6e22e">mov</span> dx, <span style="color:#ae81ff">0x111</span>   <span style="color:#75715e">; Offset to string</span>
+<span style="color:#a6e22e">mov</span> ah, <span style="color:#ae81ff">0x9</span>     <span style="color:#75715e">; Write string to stdout</span>
+<span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x21</span>        <span style="color:#75715e">; DOS Interrupt</span>
+<span style="color:#a6e22e">mov</span> ax, <span style="color:#ae81ff">0x4c02</span>  <span style="color:#75715e">; 0x4c=Exit, 0x02=Ret Val</span>
+<span style="color:#a6e22e">int</span> <span style="color:#ae81ff">0x21</span>        <span style="color:#75715e">; DOS Interrupt</span>
+
+<span style="color:#75715e">; BIOS Version</span>
+<span style="color:#a6e22e">pusha</span>
+.loop:
+    <span style="color:#a6e22e">lodsb</span>                   <span style="color:#75715e">; Load char in (SI) to AL</span>
+    <span style="color:#a6e22e">test</span> al, al             <span style="color:#75715e">; Check for null-byte</span>
+    <span style="color:#a6e22e">jz</span> .end
+    <span style="color:#a6e22e">call</span> printChar          <span style="color:#75715e">; Print the char</span>
+    <span style="color:#a6e22e">call</span> delay              <span style="color:#75715e">; Cheap animation effect</span>
+<span style="color:#a6e22e">jmp</span> .loop
+.end:
+    <span style="color:#a6e22e">popa</span>
+    <span style="color:#a6e22e">jmp</span> waitForKeypress     <span style="color:#75715e">; Go wait for a keypress</span>
+</code></pre></div><p>Lastly, DOS won&rsquo;t execute a file as a COM unless it has the <code>.com</code> extension - hence why the file is called <code>janus.com</code>!</p>
+<p>To test the COM executable, run it in DOSBox with <code>dosbox janus.com</code>.</p>
+<h1 id="elf">ELF<a href="#elf" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>The ELF format has been documented time and time again over the years. For a recent (and very relevant!) overview, take a look at my article <a href="https://tmpout.sh/1/1.html">Dead Bytes</a> from <a href="https://tmpout.sh/">tmp.0ut</a> Issue 1. The key things that we need are an ELF header (which <em>must</em> start at offset <code>0x0</code>) and a program header, which contains information about where the opcodes are and where to load them to begin execution.</p>
+<p>Typically, the program header immediately follows the ELF header, but it needn&rsquo;t be the case (<code>e_phoff</code> in the ELF header gives the offset to the start of the program header). That gives us a bit of flexibility - the 64-bit ELF and program headers are <code>64</code> and <code>56</code> bytes respectively. This means that (structure-wise) we&rsquo;re pretty much tied in to the first 64 bytes of our file, and have to reserve some 56 bytes of space somewhere later on (plus some 64-bit x86 opcodes to actually <em>do something</em>).</p>
+<p>However, we have a few tricks up our sleeve! In sheer defiance of the <a href="https://refspecs.linuxbase.org/elf/elf.pdf">ELF spec</a>, the Linux loader cares very little about a lot of the fields in these two headers. Aside from a few important fields, we&rsquo;re free to fill much of these structures with other content that is simply ignored during execution. In my case, I&rsquo;ve got some Commodore 64 BASIC instructions and a 16-bit x86 routine for the bootloader to use (<code>printChar</code>).</p>
+<p>One of the fields that we can&rsquo;t mess around with is the ELF magic at offset <code>0x0</code>: <code>\x7fELF</code>. Do you remember what was said about x86 bootloaders? Execution starts from offset <code>0x0</code>! This means that during bootloader execution, <code>7F 45</code> is in line to be executed as 16-bit opcodes! This is where it could&rsquo;ve all fallen apart, but luckily <code>7F 45</code> translates to <code>jg 0x47</code> in x86 assembly. Basically, when the ELF magic is &ldquo;executed&rdquo; in the context of a bootloader, execution will jump straight to offset <code>0x47</code> in the file. This gives both frees us from, and provides us with, another constraint: offset <code>0x47</code> now needs to either be the start of our 16-bit instructions, or another jump to those 16-bit instructions. In my case, I just have a <code>call 0x1b0</code> instruction at offset <code>0x47</code> (3 bytes total) to keep things simple.</p>
+<p>So, we&rsquo;ve got the ELF header in place, but what about the program header? We can&rsquo;t follow the ELF header immediately at <code>0x40</code> because we&rsquo;ve already got a constraint at <code>0x47</code> (7 bytes into the program header is part of the <code>p_flags</code> field, which we unfortunately can&rsquo;t mess with). This means we&rsquo;ve got a few bytes of slack, which I filled with the <code>setCursor</code> x86 routine (actually, this routine starts towards the tail-end of the ELF header because <code>e_shnum</code> and <code>e_shstrndx</code> aren&rsquo;t checked by the Linux loader).</p>
+<p>In the end, the program header starts at offset <code>0x4a</code> (making sure to update <code>e_phoff</code> in the ELF header!). The only things we really need to worry about are the <code>p_offset</code> and <code>p_filesz</code>/<code>p_memsz</code> fields. The first, <code>p_offset</code> is supposed to be the offset in the file to where the loadable segment that this program header refers to starts. By setting it to <code>0x0</code>, we&rsquo;re just loading the whole file as the segment. This means that we need to set <code>e_entry</code> in the ELF header accordingly to point to the <em>virtual memory address</em> where our 64-bit x86 instructions begin. Fortunately, we control the load address for this segment (via <code>p_vaddr</code>) so it&rsquo;s as simple as adding <code>0x400000</code> to the file offset.</p>
+<p>Lastly, we need something to execute at our entrypoint! The following 64-bit x86 instructions appear at offset <code>0xaa</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-nasm" data-lang="nasm"><span style="color:#a6e22e">mov</span> al, <span style="color:#ae81ff">0x1</span>             <span style="color:#75715e">; Linux sys_write syscall</span>
+<span style="color:#a6e22e">mov</span> di, ax
+<span style="color:#a6e22e">mov</span> esi, <span style="color:#ae81ff">0x400111</span>       <span style="color:#75715e">; String location in virtual memory</span>
+<span style="color:#a6e22e">mov</span> dl, <span style="color:#ae81ff">0x32</span>            <span style="color:#75715e">; String Length</span>
+<span style="color:#a6e22e">syscall</span>
+<span style="color:#a6e22e">mov</span> al, <span style="color:#ae81ff">0x3c</span>            <span style="color:#75715e">; Linux sys_exit syscall</span>
+<span style="color:#a6e22e">inc</span> di                  <span style="color:#75715e">; Return 2</span>
+<span style="color:#a6e22e">syscall</span>
+</code></pre></div><p>Essentially, we just use a few Linux syscalls to print our string to <code>STDOUT</code> and then exit with return value <code>2</code>. Notice that the buffer location is set to <code>0x400111</code>? We&rsquo;ve got as far as offset <code>0xaa</code>, so what&rsquo;s going on between now and offset <code>0x111</code>?</p>
+<p>To execute the file as an ELF, simply run <code>./janus.com</code> on any Linux system.</p>
+<h1 id="rar">RAR<a href="#rar" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Okay, now things start getting a little more fiddly. Up until this moment, we haven&rsquo;t really needed to worry about <em>where</em> the string appears in the file, but now it will become important. Seeing as we&rsquo;ve got this string hanging around, why couldn&rsquo;t it also be the contents of a &ldquo;compressed&rdquo; file. Starting from Ange Albertini&rsquo;s great <a href="https://github.com/corkami/pics/blob/master/binary/RAR.png">RAR poster</a>, it seemed pretty straightforward. However, there are a few important things to keep in mind (note that this is all for RAR 1.5):</p>
+<ol>
+<li>The magic bytes <code>Rar!</code> can appear anywhere in the file, so we&rsquo;re okay to start it somewhere after the bytes we&rsquo;ve already allocated.</li>
+<li>The (un)compressed file contents <em>immediately follows the &ldquo;File Header&rdquo;</em>.</li>
+<li>The &ldquo;archive end&rdquo; structure <em>immediately follows the data</em>.</li>
+</ol>
+<p>Therefore, the RAR signature, main header and file header has to sequentially prefix the string <em>and</em> the archive end header has to immediately suffix it. That&rsquo;s <code>0x3d</code> bytes <em>before</em> the string and <code>0x7</code> bytes <em>after</em>, so our string has become quite a chunk that has to appear as a single lump in the file. The only loophole is that the field at the very end of the file header (so immediately prior to the string) is the supposed filename of the &ldquo;compressed&rdquo; contents. This means that we can control this data because the filename can be anything we want (even non-printable characters!). This will be crucial when it comes to adding <a href="#zip">ZIP</a> to the polyglot.</p>
+<blockquote>
+<p>Another cool thing about RAR (and ZIP!) is that &ldquo;no compression&rdquo; is a valid option. This is great because it allows us to keep on using the string that&rsquo;s already present (which is also used by the executable parts of this file!), and leave us more room for different filetypes.</p>
+</blockquote>
+<p>The third point above is why the <code>unrar</code> output looks different to all the other parsers that handle this file: it has to print everything up-to-and-including the <code>$</code> that terminates the string in DOS mode. Sure, it&rsquo;s a little aesthetically displeasing, but there&rsquo;s not really anything else we can do. ¯\_(ツ)_/¯</p>
+<p>Lastly, partly for my own reference, but also for anyone who wishes to follow in my footsteps, here are two vital details that took me ages to track down.</p>
+<ol>
+<li>
+<p>It was <em>very difficult</em> to figure out what the CRC is in the RAR file header. According to Ange Albertini&rsquo;s <a href="https://github.com/corkami/pics/blob/master/binary/RAR.png">poster</a>, it was 2 bytes long, and leaving it blank (<code>00 00</code>), gave me a CRC error in <code>unrar</code> (which confirmed the rest of the structure was correct). Eventually, I resorted to the <a href="https://www.rarlab.com/rar/unrarsrc-6.0.7.tar.gz">UnRAR source</a> (someone&rsquo;s <a href="https://github.com/aawc/unrar">GitHub mirror</a>). After some searching, I found the function <code>GetCRC15()</code> which, as you might guess, calculates the CRC for RAR version 1.5. <a href="https://github.com/aawc/unrar/blob/d84d61312db5dd83ed1da9fe3e45cb233a56630c/rawread.cpp#L171">Here I found</a> that it&rsquo;s just a CRC32 with the two higher bytes truncated!</p>
+</li>
+<li>
+<p>Secondly, I had a hard time figuring out the datetime format. For most of the time I was working on this project, it remained the example given in Ange Albertini&rsquo;s <a href="https://github.com/corkami/pics/blob/master/binary/RAR.png">RAR poster</a>. Eventually, while I was working on what was ultimately a dead end, I started using the incredibly cool <a href="https://kaitai.io/">Kaitai Struct</a>, where I found the format laid out perfectly clear in <a href="https://github.com/kaitai-io/kaitai_struct_formats/blob/d1e58e36f26ecff1375c6022dc040342914ee4d1/archive/rar.ksy#L151"><code>rar.ksy</code></a>. Essentially, it&rsquo;s just a big bitfield with 2 bytes for the date and 2 bytes for the time. Is there anything special about the date and time I chose?</p>
+</li>
+</ol>
+<p>To see the contents as a RAR archive, run <code>unrar p -idq janus.com</code>.</p>
+<h1 id="zip">ZIP<a href="#zip" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Okay, ZIP (or PKZIP to be precise) was bit trickier purely because it&rsquo;s a lot more fiddly (some might say &ldquo;versatile&rdquo;) than RAR. What makes PKZIP unique (at least in my experience) is that it&rsquo;s parsed <em>backwards</em>. Once the &ldquo;End of Central Directory&rdquo; signature is found, it&rsquo;s followed by the size of the &ldquo;Central Directory&rdquo; and an offset to where it begins. This is kinda like a contents with filenames, CRCs (this time just a regular ol' CRC32), (un)compressed size, etc.</p>
+<p>As before, an invaluable resource was Ange Albertini&rsquo;s <a href="https://github.com/corkami/pics/blob/master/binary/ZIP.png">ZIP poster</a>.</p>
+<p>An interesting difference between RAR and ZIP is that with ZIP, the filename forms part of the Central Directory, but not the File Header. This means that the filename can still be anything we want, but it isn&rsquo;t followed by the string itself. Instead the string is prepended by the &ldquo;Local File Header&rdquo;, which is <code>0x1e</code> bytes in size.</p>
+<p>However, we already have the requirement that the RAR file header prepends the string, so what can we do? This is where the order of the fields of the RAR file header comes in handy! The final field is the filename, so all we have to do is make the filename in the <em>RAR File Header</em> the <em>PKZIP Local File Header</em>. This has the result of making the filename (as far as <code>unrar</code> is concerned) total junk - although it will still extract just fine if you ask it to.</p>
+<p>This nifty trick let&rsquo;s us smuggle the PKZIP Local File Header into the RAR File Header and get&rsquo;s us safely through <em>both</em> parsers. It so happens that the PKZIP filename is also unimportant, so I decided to shove another 16-bit x86 routine in there, this time it&rsquo;s <code>delay</code> (see offset <code>0x179</code>).</p>
+<h1 id="gnu-multiboot2">GNU Multiboot2<a href="#gnu-multiboot2" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Alright, hands up with this one - it&rsquo;s a bit cheeky. <a href="https://www.gnu.org/software/grub/manual/multiboot2/multiboot.html">GNU Multiboot</a> is a pretty straightforward spec that allows a bootloader like GRUB to boot this file without having to go via the BIOS. It&rsquo;s just 4 <code>u32</code>s: a magic, an architecture field, the header&rsquo;s length and a checksum. The only thing that I found interesting is the checksum - it&rsquo;s defined to be the &ldquo;32-bit unsigned value which, when added to the other magic fields, must have a 32-bit unsigned sum of zero.&rdquo;. You can see this header at offset <code>0x19c</code>.</p>
+<p>To check the validity of the image, run <code>grub-file --is-x86-multiboot2 janus.com</code>. There should be no output, but checking the return value with <code>echo $?</code> will give <code>0</code>, indicating success.</p>
+<h1 id="commodore64-prg">Commodore64 PRG<a href="#commodore64-prg" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<blockquote>
+<p>In keeping with 8-bit tradition, hexadecimal values in this section are prepended by <code>$</code> rather than <code>0x</code>, where relating to the Commodore64.</p>
+</blockquote>
+<p>I managed to incorporate everything so far in this post within about 3 weeks. It then took me a couple of months before I found something else to add. Being an x86 bootloader initially, I had the hard limit of 512 bytes in terms of filesize. There were still quite a few bytes left over and I really wanted to fill them with something cool - and preferably something that I couldn&rsquo;t find any examples of online.</p>
+<p>I <em>really</em> wanted to something retro-computing-themed, and went through quite a few deep dives into different formats: GameBoy, NES, PDP-11, and even the ZX Spectrum&rsquo;s tape format. Eventually, I settled on the Commodore64&rsquo;s PRG format.</p>
+<p>PRG files are reasonably straightforward, so I&rsquo;ll outline them here. Keep in mind that the Commodore64 is an 8-bit system with only 64k of memory, so pointers are always 2 bytes.</p>
+<ol>
+<li>The first 2 bytes are a pointer to where in memory this PRG file should be stored. This is referred to as being loaded &ldquo;absolute&rdquo;. For us, this is <code>7F 45</code> (the first 2 bytes of the ELF magic). <em>However</em>, we&rsquo;ll see further down that we can cheat our way around this one. PRG files are loaded to the start of BASIC RAM at <code>$0800</code>.</li>
+<li>Next comes 2 bytes that point to the next line of BASIC. For us we&rsquo;re stuck with <code>4C 46</code> (the &ldquo;LF&rdquo; in the ELF magic). Again, it&rsquo;s possible to get the Commodore64 to ignore this pointer and just parse the file sequentially by <em>not</em> loading &ldquo;absolute&rdquo;.</li>
+<li>Then we get the BASIC line number as another 2 bytes.</li>
+<li>Now comes the BASIC token (or sometimes called bytecode). You can see a table of available BASIC tokens <a href="https://www.c64-wiki.com/wiki/BASIC_token">here</a>. (If you&rsquo;ve written BASIC before, you&rsquo;ve probably used the verb-form instead. Once a program is saved to tape/diskette, these verbs are converted to tokens to save space and automatically translated back into verbs by the <code>LIST</code> command).</li>
+<li>Lastly, we need any arguments that are passed to this BASIC token. The arguments typically just take the form of ASCII/PETSCII. The arguments and this BASIC line are terminated by a null byte.</li>
+<li>We now either have a null pointer (i.e. <code>00 00</code>), or a pointer to the next line of BASIC to continue execution.</li>
+</ol>
+<p>So, how can we go about fitting all this into our polyglot? To start with, we need to consider how this file is loaded into RAM to be executed. (Un)surprisingly enough, this is accomplished by the <code>LOAD</code> command, which takes 3 arguments. First is the filename, second is the disk drive number (default is <code>8</code>), and lastly is the option to load the file &ldquo;absolute&rdquo; or not. If we choose <em>not</em>, then the file will be stored at the start of BASIC RAM (<code>0x0800</code>) regardless of what the first 2 bytes say! Therefore, the command we need looks like <code>LOAD&quot;janus.com&quot;,8</code> (note the lack of a third argument!). As I&rsquo;m using the <a href="https://vice-emu.sourceforge.io/">VICE</a> emulator, I can just use the <code>-basicload</code> CLI argument when starting the emulator to do this automatically.</p>
+<p>Now, I&rsquo;ve got some <em>very limited space</em> in which to cram the rest of this file because we have <code>e_type</code> and <code>e_machine</code> of the <a href="#elf">ELF</a> header at offsets <code>0x10</code> and <code>0x12</code> respectively. Therefore, I either need to finish the PRG content before then (giving me only 12 bytes left!) or find a way to coincidentally let <code>02 00 3E 00</code> be a part of the PRG without affecting execution. Sounds hard, right?</p>
+<p>So, what BASIC instruction are we going to use? We need something that will either print my string further down or will let me jump execution to somewhere less space-constrained. The natural choice is the <code>SYS</code> instruction (token code <code>$9E</code>), which takes a pointer to 6502 machine code as it&rsquo;s only argument. It then jumps to that location and begins execution before eventually returning to BASIC. The argument takes the form of &ldquo;<code> (0000)</code>&rdquo;, where <code>0000</code> is a <em>decimal</em> address of the 6502 instructions (note the single space before the first bracket too!).</p>
+<p>Following that up with a single null byte takes us all the way to file offset <code>0xe</code>! There&rsquo;s not much we can do with a single byte, so I left that as a null byte too. Next comes the dreaded <code>e_type</code> and <code>e_machine</code> with <code>02 00 3E 00</code>. What does the PRG think they are? Well, <code>02 00</code> is the pointer to the next line of BASIC, but because we&rsquo;ve loaded the PRG in non-&ldquo;absolute&rdquo; mode (the missing <code>,1</code> at the end of the <code>LOAD</code> command), all that matters is the fact that it isn&rsquo;t a null pointer (which would indicate the end of the program). Therefore, the next 2 bytes (<code>3E 00</code>) are interpreted as the line number of the next line of BASIC. But we don&rsquo;t have another line of BASIC!</p>
+<blockquote>
+<p>If you run this polyglot in VICE, after the message is printed, and the BASIC prompt is returned, if you type <code>LIST</code> to print out the BASIC program, you&rsquo;ll see: <code>10 SYS (2491)</code> followed by <code>15872</code>, and 15872 in hexadecimal is <code>0x003e</code>!</p>
+</blockquote>
+<p>Luckily, the next field of the ELF header is <code>e_version</code>, which is one of the fields that isn&rsquo;t checked by the Linux loader. Therefore, by setting this field to null bytes, the Commodore64 will think that this line of BASIC has finished, <em>and</em> that the BASIC program as a whole has finished too because the middle two null bytes of <code>e_version</code> will be interpreted a pointer to the next line. Therefore, the Commodore64 stops parsing <code>janus.com</code> as BASIC once it reaches 3 bytes into <code>e_version</code>.</p>
+<p>Okay great, now we can arbitrarily redirect execution on the Commodore 64 to somewhere else in our file. The only catch is that we now have to use 6502 assembly to do anything. In my search for understanding the 6502 a bit better, I found ChibiAkumas' <a href="https://www.youtube.com/c/ChibiAkumas">YouTube Channel</a> and <a href="https://www.chibiakumas.com/6502/">website</a>, which proved invaluable. Ultimately, my 6502 assembly looks like this:</p>
+<pre tabindex="0"><code>; C64 6502 Assembly             ; Offset +0x1bc
+;       When the C64 soft resets following the &quot;SYS&quot; BASIC instruction,
+;       PC will point here.
+;
+;       Load full character set so we can use lower-case
+;
+        db 0xa9, 0x0e           ; lda #0x0e     ; Full Character Set
+        db 0x20, 0xd2, 0xff     ; jsr 0xffd2    ; C64 CHROUT
+
+;       C64 is 8-bit, so we have to load the low and high bytes of the 
+;       string address one at a time. We load them into an address in 
+;       the &quot;zero-page&quot; ($0020) so that we can use the Y register to
+;       easily deference the bytes in the string.
+;
+        db 0xa9, 0x09           ; lda #&gt;msg ($09)
+        db 0x85, 0x21           ; sta $21              ; High Byte
+        db 0xa9, 0x10           ; lda #&lt;msg ($10)
+        db 0x85, 0x20           ; sta $20              ; Low Byte
+
+;       Print the string, and return to BASIC
+;
+        db 0x20, 0xcc, 0x09     ; jsr $09cc            ; Call printStr
+        db 0x60                 ; rts                  ; Return to BASIC
+
+;       Print String Routine    ; C64 Addr: $09cc
+;
+        db 0xa0, 0x00           ; ldy #0x0             ; Reset Y
+;       LOOP
+            db 0xb1, 0x20       ; lda ($20),y          ; Read in a character
+            db 0xc0, 0x21       ; cpy #$21             ; After 33 chars
+            db 0xf0, 0x0b       ; beq +$b              ; Jump to EXTRACR
+            db 0xc9, 0x00       ; cmp #$00             ; $00-terminated string
+            db 0xf0, 0x0d       ; beq +$d              ; Jump to END
+            db 0x20, 0xeb, 0x09 ; jsr $09eb            ; Jump to printChar
+            db 0xc8             ; iny                  ; Increment Y
+            db 0x4c, 0xce, 0x09 ; jmp $09ce            ; Jump to LOOP
+;       EXTRACR
+            db 0x20, 0xe6, 0x09 ; jsr $09e6            ; Print a CR
+            db 0x4c, 0xd4, 0x09 ; jmp $09d4            ; Jump back into LOOP
+;       DONE
+            db 0x60             ; rts                  ; Return
+
+;       Print CR Routine        ; C64 Addr: $09e6
+;
+        db 0xa9, 0x0d           ; lda #13               ; Carriage Return
+        db 0x4c, 0xeb, 0x09     ; jmp $09eb             ; Jump to printChar
+
+;       Print Character Routine ; C64 Addr: $09eb
+;       The C64 uses PETSCII, not ASCII. For alpha-numeric characters,
+;       we can just flip the 6th most significant bit to convert.
+;       Anything above 64 (&quot;@&quot;), can be left alone.
+;
+        db 0xc9, 0x40           ; cmp #64
+        db 0x90, 0x02           ; bcc +$2               ; Jump to DONE
+        db 0x49, 0x20           ; eor #0b00100000       ; Convert Char
+;       DONE
+            db 0x4c, 0xd2, 0xff ; jmp $ffd2             ; C64 CHROUT
+
+</code></pre><p>I found working with the Commodore64&rsquo;s pointers a little tricky as I haven&rsquo;t spent a lot of time working with systems from this period. In the end, I found it a lot easier to just <code>LOAD</code> the file, and then use the built-in monitor in VICE to find memory locations and then fix them manually. This is how I got the precise offset to the string at memory location <code>$0910</code>. In retrospect, I could&rsquo;ve calculated it like a big boy, but this was faster.</p>
+<p>If this is the first time you&rsquo;ve seen 6502 assembly (as it would have been for me prior to working on this project!), the listing above probably doesn&rsquo;t mean much to you. The interesting thing to take away is how we pass a 16-bit pointer to a routine on a system that only has 8-bit registers.</p>
+<p>The trick here involves using the &ldquo;zero-page&rdquo; (the first page of memory). What we do is store the memory address <code>$0910</code> (where the string is) to address <code>$0020</code> (the first byte of any address gives it&rsquo;s page number, as the pages are all 256 bytes in size). We have to do this 1 byte at a time due to the 8-bit limitation.</p>
+<p>Next we use the <code>Y</code> register, which has the special property that it can be used as an offset to any address in the zero-page. It&rsquo;s kind of a weird addressing mode that looks <em>something like</em> <code>[zero_page_addr + Y]</code>. This only works for the zero-page and that&rsquo;s one of the things that makes it special. Now, we can use the <code>Y</code> register as an index to the characters in our string and print them to the screen one at a time via the Commodore64 &ldquo;<em>KERNAL</em>&quot;&rsquo;s built-in <code>CHROUT</code> routine. The result is that the string appears on screen and we get a BASIC prompt back. :)</p>
+<p>To run this polyglot under VICE, use <code>x64 -basicload janus.com</code>.</p>
+<h1 id="summary">Summary<a href="#summary" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Wow, that was a lot to take in! I tried to keep it to the interesting parts because this project took me several months on-and-off from start to finish. Just like last year&rsquo;s BGGP, I was convinced that I wouldn&rsquo;t be able to produce an entry, but just kept working on it until something started to come together.</p>
+<p>I&rsquo;d like to stress that, although this article can be read in under an hour, these 512 bytes took me literal <em>months</em> to assemble into their final arrangement. Like many of you, I&rsquo;d read the polyglot articles in PoC||GTFO, but had never actually tried to put one together.</p>
+<p>Even though this years BGGP has come to close (and will hopefully be followed by another one next year!), I highly encourage anyone who made it to the end of this article to give a polyglot a go! Whether you start with something familiar, or something more exotic is up to you, but just try it!</p>
+<p>So, in all it&rsquo;s glory, once again is <code>janus.com</code>, an x86 bootloader, ELF, COM, RAR, ZIP, GNU Mulitboot2, and Commodore64 PRG hybrid. You can find this project (and the NASM source) on my <a href="https://github.com/xcellerator/janus">Github</a>.</p>
+<pre tabindex="0"><code>00000000: 7f45 4c46 0a00 9e20 2832 3439 3129 0000  .ELF... (2491)..
+00000010: 0200 3e00 0000 0000 aa00 4000 0000 0000  ..&gt;.......@.....
+00000020: 4a00 0000 0000 0000 b40e b700 b300 cd10  J...............
+00000030: 9090 90c3 4000 3800 0100 60b4 02b7 00b6  ....@.8...`.....
+00000040: 02b2 00cd 1061 c3e8 6601 0100 0000 0500  .....a..f.......
+00000050: 0000 0000 0000 0000 0000 0000 4000 0000  ............@...
+00000060: 0000 5858 5858 5858 5858 2b00 0000 0000  ..XXXXXXXX+.....
+00000070: 0000 2b00 0000 0000 0000 60b4 0630 c0b7  ..+.......`..0..
+00000080: 0331 c9ba 4f18 cd10 61c3 0e1f ba11 02b4  .1..O...a.......
+00000090: 09cd 21b8 024c cd21 60ac 84c0 7408 e887  ..!..L.!`...t...
+000000a0: ffe8 d500 ebf3 61e9 4b01 b001 6689 c7be  ......a.K...f...
+000000b0: 1101 4000 b232 0f05 b03c 66ff c70f 0552  ..@..2...&lt;f....R
+000000c0: 6172 211a 0700 cf90 7300 000d 0000 0000  ar!.....s.......
+000000d0: 0000 004a 9274 2080 3e00 3300 0000 3300  ...J.t .&gt;.3...3.
+000000e0: 0000 02b1 9cc4 8aa0 6c28 0c14 301e 0020  ........l(..0.. 
+000000f0: 0000 0050 4b03 040a 0000 0000 0058 5858  ...PK........XXX
+00000100: 5860 a6d1 2c30 0000 0030 0000 0000 0000  X`..,0...0......
+00000110: 0042 4747 5020 3230 3231 2047 4f54 204d  .BGGP 2021 GOT M
+00000120: 4520 5448 494e 4b49 4e47 2053 5452 414e  E THINKING STRAN
+00000130: 4745 202d 2078 6365 6c6c 6572 6174 6f72  GE - xcellerator
+00000140: 0a0d 0024 c43d 7b00 4007 0050 4b01 0200  ...$.={.@..PK...
+00000150: 000a 0000 0000 0058 5858 5860 a6d1 2c30  .......XXXX`..,0
+00000160: 0000 0030 0000 000f 0000 0000 0058 5858  ...0.........XXX
+00000170: 5858 5858 58f3 0000 0060 b486 b000 b901  XXXXX....`......
+00000180: 00ba 0000 cd15 61c3 504b 0506 0000 5858  ......a.PK....XX
+00000190: 5858 0100 3d00 0000 4b01 0000 5858 5858  XX..=...K...XXXX
+000001a0: d650 52e8 0000 0000 0001 0000 2aae ad17  .PR.........*...
+000001b0: e8c7 fee8 84fe be11 7de8 cefe a90e 20d2  ........}..... .
+000001c0: ffa9 0985 21a9 1085 2020 cc09 60a0 00b1  ....!...  ..`...
+000001d0: 20c0 21f0 0bc9 00f0 0d20 eb09 c84c ce09   .!...... ...L..
+000001e0: 20e6 094c d409 60a9 0d4c eb09 c940 9002   ..L..`..L...@..
+000001f0: 4920 4cd2 ff90 60b4 00cd 1661 ebb2 55aa  I L...`....a..U.
+</code></pre><h1 id="obligatory-shoutouts">Obligatory Shoutouts<a href="#obligatory-shoutouts" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Thanks as always to <a href="https://twitter.com/netspooky">@netspooky</a> for creating and running this competition. Thanks also to the Binary Golf Association for understanding and scoring all the entries that were received. Lastly, a special &ldquo;ahoy&rdquo; to yuu, hermit, dnz, subvisor, bane, gren, remy, gilda, kyo, harmony, computer_user and all the other ghosts.</p>
+<p>Until next time&hellip;</p>
+
+      </div></div>
+
+  
+  
+<div class="pagination">
+    <div class="pagination__title">
+        <span class="pagination__title-h">Read other posts</span>
+        <hr />
+    </div>
+    <div class="pagination__buttons">
+        
+        
+        <span class="button next">
+            <a href="/posts/linux_rootkits_11/">
+                <span class="button__text">Linux Rootkits: New Methods for Kernel 5.7&#43;</span>
+                <span class="button__icon">→</span>
+            </a>
+        </span>
+        
+    </div>
+</div>
+
+  
+
+  
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright copyright--user">
+        <span>Harvey Phillips 2020 - London, England</span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="/assets/main.js"></script>
+<script src="/assets/prism.js"></script>
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>

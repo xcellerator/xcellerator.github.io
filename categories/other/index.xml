@@ -7,7 +7,17 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Tue, 25 Aug 2020 21:00:00 +0100</lastBuildDate><atom:link href="/categories/other/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 16 Sep 2021 12:00:00 +0100</lastBuildDate><atom:link href="/categories/other/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Janus: A Polyglot Binary for BGGP 2021</title>
+      <link>/posts/bggp21/</link>
+      <pubDate>Thu, 16 Sep 2021 12:00:00 +0100</pubDate>
+      
+      <guid>/posts/bggp21/</guid>
+      <description>This year, @netspooky announced another round of the Binary Golf Grand Prix. If you missed it last year, the challenge was to create a palindromic binary - you can see the writeup of my entry, BootNoodle, here. This time around, the theme was polyglots, i.e. the challenge was to create a binary (as small as possible - hence the Golf part&amp;hellip;) that was simulateously another filetype.
+The rules were laid out very clearly into 2 categories: first - the smallest file that satisfied all the rules wins; second - rack up points by overlapping more and more filetypes with the bytes of your host binary.</description>
+    </item>
+    
     <item>
       <title>Coming soon!</title>
       <link>/posts/check_back_soon/</link>

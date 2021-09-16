@@ -184,14 +184,14 @@ In the FreeBSD world, you can find Joseph Kong&amp;rsquo;s amazing book Designin
 <p>That&rsquo;s all well and good, but before we can go on to learning about the precise ways of modifying kernel memory and how to write hook functions, we need to get our workflow sorted.</p>
 <p>As mentioned, the first thing we need is a VM. You&rsquo;re free to use VirtualBox or something else your comfortable with, but during this process I discovered <a href="https://www.vagrantup.com/">Vagrant</a>. If you&rsquo;ve already got VirtualBox installed, then Vagrant will automatically use it for virtualization without any configuration needed.</p>
 <p>Vagrant uses the current directory to store the configuration for the current VM. If you need another VM, create a new directory and run vagrant again! To give you an idea of how easy vagrant is:</p>
-<pre><code>vagrant init generic/ubuntu2004
+<pre tabindex="0"><code>vagrant init generic/ubuntu2004
 vagrant up
 vagrant ssh
 </code></pre><p>And with that, I&rsquo;m looking at a bash prompt in an Ubuntu 20.04 VM! Then <code>vagrant upload ~/.ssh</code> and <code>vagrant upload ~/.vimrc</code> makes our lives easier down the line.</p>
 <p>Either way, once you&rsquo;re in your VM, you&rsquo;re gonna need a few things. I&rsquo;m going to base this tutorial on Ubuntu 20.04 (if you don&rsquo;t use Ubuntu then I&rsquo;m sure you can figure out the changes to make). Make sure your system is fully updated (including any kernel updates!), then go for the usual <code>apt update; apt install git build-essential linux-headers-$(uname -r)</code> (git is optional, but highly recommended!). Once that&rsquo;s done, we can look at building a simple kernel module.</p>
 <h1 id="building-kernel-modules">Building Kernel Modules<a href="#building-kernel-modules" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Let&rsquo;s look at the following C code (it&rsquo;s a good idea to get this into a file because we are going to build it soon!).</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/init.h&gt;</span><span style="color:#75715e">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/init.h&gt;</span><span style="color:#75715e">
 </span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/module.h&gt;</span><span style="color:#75715e">
 </span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/kernel.h&gt;</span><span style="color:#75715e">
 </span><span style="color:#75715e"></span>
@@ -218,7 +218,7 @@ module_exit(example_exit);
 <p>Next we have two very important functions that will <em>always be present</em>. The <code>example_init</code> function is executed once the module is loaded, and <code>example_exit</code> when it is unloaded. The final two lines declare to the compiler the roles that <code>example_init</code> and <code>example_exit</code> have. (You can name these two functions whatever you want as long as you keep <code>__init</code> and <code>__exit</code> in their declarations and change those final two lines).</p>
 <p>All these functions do (for now!) is <code>printk()</code> a string to the kernel buffer (which you see the contents of using <code>dmesg</code>). This <code>printk()</code> function is a lot like the more familiar <code>printf()</code>, except we <em>always</em> start with a <code>KERN_*</code> macro which defines the log level of the message (see <a href="https://elinux.org/Debugging_by_printing#Log_Levels">here</a> for all the possible log levels). We&rsquo;ll pretty much always use either <code>KERN_INFO</code> or <code>KERN_DEBUG</code>. Observe that this macro does <em>not</em> belong in quotes like the rest of the string! We are also welcome to use format strings in <code>printk()</code> just like in <code>printf()</code> which will be our main method of pulling data out of the kernel when we&rsquo;re debugging.</p>
 <p>Okay, so that&rsquo;s pretty simple, right? But how do we compile it? We use the following Makefile:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-makefile" data-lang="makefile">obj-m <span style="color:#f92672">+=</span> example.o
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-makefile" data-lang="makefile">obj-m <span style="color:#f92672">+=</span> example.o
 
 <span style="color:#a6e22e">all</span><span style="color:#f92672">:</span>
     make -C /lib/modules/<span style="color:#66d9ef">$(</span>shell uname -r<span style="color:#66d9ef">)</span>/build M<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>PWD<span style="color:#66d9ef">)</span> modules

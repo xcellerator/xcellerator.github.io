@@ -1,260 +1,161 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
-  
   <url>
     <loc>/categories/</loc>
-    <lastmod>2021-01-11T17:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
+    <lastmod>2021-09-16T12:00:00+01:00</lastmod>
+  </url><url>
+    <loc>/posts/bggp21/</loc>
+    <lastmod>2021-09-16T12:00:00+01:00</lastmod>
+  </url><url>
+    <loc>/categories/other/</loc>
+    <lastmod>2021-09-16T12:00:00+01:00</lastmod>
+  </url><url>
+    <loc>/posts/</loc>
+    <lastmod>2021-09-16T12:00:00+01:00</lastmod>
+  </url><url>
+    <loc>/categories/reverse_engineering/</loc>
+    <lastmod>2021-09-16T12:00:00+01:00</lastmod>
+  </url><url>
+    <loc>/</loc>
+    <lastmod>2021-09-16T12:00:00+01:00</lastmod>
+  </url><url>
     <loc>/tags/kernel-5.7/</loc>
     <lastmod>2021-01-11T17:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/linux/</loc>
     <lastmod>2021-01-11T17:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/categories/linux/</loc>
     <lastmod>2021-01-11T17:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/linux_rootkits_11/</loc>
     <lastmod>2021-01-11T17:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/posts/</loc>
-    <lastmod>2021-01-11T17:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/rootkit/</loc>
     <lastmod>2021-01-11T17:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/</loc>
     <lastmod>2021-01-11T17:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/</loc>
-    <lastmod>2021-01-11T17:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/drovorub/</loc>
     <lastmod>2020-10-29T12:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/fancy-bear/</loc>
     <lastmod>2020-10-29T12:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/linux_rootkits_10/</loc>
     <lastmod>2020-10-29T12:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/bleeding_tooth/</loc>
     <lastmod>2020-10-17T15:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/bleedingtooth/</loc>
     <lastmod>2020-10-17T15:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/bluetooth/</loc>
     <lastmod>2020-10-17T15:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/information-leak/</loc>
     <lastmod>2020-10-17T15:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/categories/reverse_engineering/</loc>
-    <lastmod>2020-10-17T15:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/linux_rootkits_09/</loc>
     <lastmod>2020-10-16T12:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/logged-in/</loc>
     <lastmod>2020-10-16T12:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/stealth/</loc>
     <lastmod>2020-10-16T12:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/users/</loc>
     <lastmod>2020-10-16T12:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/linux_rootkits_08/</loc>
     <lastmod>2020-10-02T12:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/network/</loc>
     <lastmod>2020-10-02T12:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/ports/</loc>
     <lastmod>2020-10-02T12:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/linux_rootkits_07/</loc>
     <lastmod>2020-10-01T12:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/processes/</loc>
     <lastmod>2020-10-01T12:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/container/</loc>
     <lastmod>2020-09-27T10:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/docker/</loc>
     <lastmod>2020-09-27T10:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/escape/</loc>
     <lastmod>2020-09-27T10:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/privileged/</loc>
     <lastmod>2020-09-27T10:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/docker_escape/</loc>
     <lastmod>2020-09-27T10:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/directories/</loc>
     <lastmod>2020-09-19T19:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/linux_rootkits_06/</loc>
     <lastmod>2020-09-19T19:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/linked-lists/</loc>
     <lastmod>2020-09-17T19:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/linux_rootkits_05/</loc>
     <lastmod>2020-09-17T19:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/char/</loc>
     <lastmod>2020-09-09T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/categories/cryptography/</loc>
     <lastmod>2020-09-09T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/device/</loc>
     <lastmod>2020-09-09T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/linux_rootkits_04/</loc>
     <lastmod>2020-09-09T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/random/</loc>
     <lastmod>2020-09-09T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/urandom/</loc>
     <lastmod>2020-09-09T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/backdoor/</loc>
     <lastmod>2020-08-29T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/linux_rootkits_03/</loc>
     <lastmod>2020-08-29T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/root/</loc>
     <lastmod>2020-08-29T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/tags/ftrace/</loc>
     <lastmod>2020-08-26T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/linux_rootkits_02/</loc>
     <lastmod>2020-08-26T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/check_back_soon/</loc>
     <lastmod>2020-08-25T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/linux_rootkits_01/</loc>
     <lastmod>2020-08-25T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/categories/other/</loc>
-    <lastmod>2020-08-25T21:00:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/bggp/</loc>
     <lastmod>2020-06-23T20:37:00+01:00</lastmod>
-  </url>
-  
-  <url>
+  </url><url>
     <loc>/posts/yubikey/</loc>
     <lastmod>2019-06-11T14:35:00+01:00</lastmod>
   </url>
-  
 </urlset>

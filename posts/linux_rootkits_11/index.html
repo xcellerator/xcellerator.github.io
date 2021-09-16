@@ -177,12 +177,12 @@
 </blockquote>
 <h1 id="procfs-changes">ProcFS Changes<a href="#procfs-changes" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Let&rsquo;s deal with the changes to <code>proc_create()</code> first. This is a pretty simple fix, but illustrates a nice method for handling such changes, without breaking existing support. Looking at the declaration in <a href="https://elixir.bootlin.com/linux/v5.5.19/source/include/linux/proc_fs.h#L49">v5.5.19</a>, we see:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> proc_dir_entry <span style="color:#f92672">*</span><span style="color:#a6e22e">proc_create</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>name, 
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> proc_dir_entry <span style="color:#f92672">*</span><span style="color:#a6e22e">proc_create</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>name, 
         umode_t mode, 
         <span style="color:#66d9ef">struct</span> proc_dir_entry <span style="color:#f92672">*</span>parent, 
         <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> file_operations <span style="color:#f92672">*</span>proc_fops);
 </code></pre></div><p>This declaration is what we made use of in <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/5f3a511e0983645968a210e8ba8447315c52d90a/3_RootkitTechniques/3.8_privileged_container_escaping/escape.c#L205"><code>escape.c</code></a> from <a href="../docker_escape">Privileged Container Escapes with Kernel Modules</a>. However, as of version 5.6, <code>proc_create()</code> now looks like <a href="https://elixir.bootlin.com/linux/v5.6/source/include/linux/proc_fs.h#L64">this</a>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> proc_dir_entry <span style="color:#f92672">*</span><span style="color:#a6e22e">proc_create</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>name, 
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> proc_dir_entry <span style="color:#f92672">*</span><span style="color:#a6e22e">proc_create</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>name, 
         umode_t mode, 
         <span style="color:#66d9ef">struct</span> proc_dir_entry <span style="color:#f92672">*</span>parent, 
         <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> proc_ops <span style="color:#f92672">*</span>proc_ops);
@@ -192,7 +192,7 @@
 <li>The <code>.read</code> / <code>.write</code> fields for the IO handlers are now called <code>.proc_read</code> / <code>.proc_write</code> respectively</li>
 </ul>
 <p>So, what&rsquo;s the best way to handle these changes? With the preprocessor! In particular, <code>&lt;linux/version.h&gt;</code> provides us with the <code>LINUX_VERSION_CODE</code> and <code>KERNEL_VERSION</code> macros. These let us implement these changes very simply:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#if LINUX_VERSION_CODE &gt;= KERNEL_VERSION(5,6,0)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#if LINUX_VERSION_CODE &gt;= KERNEL_VERSION(5,6,0)
 </span><span style="color:#75715e"></span><span style="color:#75715e">// proc_ops version
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> proc_ops proc_file_fops_escape <span style="color:#f92672">=</span> {
     .proc_write <span style="color:#f92672">=</span> escape_write,
@@ -223,7 +223,7 @@
 <p>Now, we come to a slightly more difficult problem. Without <code>kallsyms_lookup_name()</code>, we can&rsquo;t easily resolve a symbol name to a memory address, which means we can&rsquo;t hook functions with ftrace (recall that we use ftrace to register callbacks that are triggered when <code>$rip</code> equals the memory address of the function we want to hook).</p>
 <p>My original idea was to look for a different kernel function (which <em>is</em> still exported) that could be used to inadvertently resolve symbol names. I settled on <code>sprint_symbol()</code> which does the <em>opposite</em> of <code>kallsyms_lookup_name()</code>, i.e. given a memory address, it returns the name of the function at that address.</p>
 <p>Using this, I decided to just loop over addresses from the base address up, calling <code>sprint_symbol()</code> each time and <code>strncmp()</code>ing until I found that function I wanted. While slightly inelegant, it worked surprisingly well. It looked something like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/*
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/*
 </span><span style="color:#75715e"> * kaddr is an unsigned long which holds the memory address being looped over
 </span><span style="color:#75715e"> * fname_lookup is a kernel buffer which stores the name of the function at kaddr
 </span><span style="color:#75715e"> * fname is a kernel buffer storing the function we&#39;re searching for
@@ -256,7 +256,7 @@ kaddr <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;=</s
 kfree(fname_lookup);
 </code></pre></div><p>If I didn&rsquo;t end up using this technique, why have I bothered to tell you about it? For two reasons; first is to illustrate that there is always more than one way to skin a cat. Second is because of the trick I used above to get the kernel base address. The problem that I faced was how to know where to start brute-forcing from. The address that the kernel is loaded from is called <code>startup_64</code> (you can find it in <code>/proc/kallsyms</code>), but kernel address space layout randomization means that this address will change at every boot. However, even though we can&rsquo;t use <code>kallsyms_lookup_name()</code>, we can still get the address of any <em>exported</em> kernel function by using the <code>&amp;</code> operator.</p>
 <p>If you check the address of <code>sprint_symbol</code> and <code>startup_64</code> on your system, you&rsquo;ll notice that only the last 3 bytes are different. This is because <code>sprint_symbol</code> is less than <code>0x100000</code> bytes from the beginning of the kernel. That difference does <em>not</em> change between reboots. Therefore, we can just drop those last three bytes and we get the base address! Although it&rsquo;s already in the snippet above, I&rsquo;ll lay it out here again because I think it&rsquo;s pretty cool:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/* Get the address of sprint_symbol() */</span>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/* Get the address of sprint_symbol() */</span>
 kaddr <span style="color:#f92672">=</span> (<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span>) <span style="color:#f92672">&amp;</span>sprint_symbol;
 
 <span style="color:#75715e">/* Set the last 3 bytes of the address to 0x00 */</span>
@@ -266,7 +266,7 @@ kaddr <span style="color:#f92672">&amp;=</span> <span style="color:#ae81ff">0xff
 <p>After a bit of back-and-forth, they came up with a <a href="https://github.com/xcellerator/linux_kernel_hacking/issues/3#issuecomment-757951117">a very neat solution</a> to the problem. Their code in that comment illustrates the main idea really well. We simply declare a <code>kprobe</code> struct with the <code>.symbol_name</code> field preset to <code>kallsyms_lookup_name</code>. Once the kprobe is registered, we can dereference the <code>.addr</code> field to obtain the memory address!</p>
 <p>In order to implement this technique effectively and neatly, I wanted all the changes to be in <code>ftrace_helper.h</code> only. The trick here is to use the macros provided by <code>&lt;linux/version.h&gt;</code> as mentioned above, to check the kernel version, and then resolve <code>kallsyms_lookup_name()</code> manually before using it as we would normally.</p>
 <p>Initially, we just include <code>&lt;linux/kprobes.h&gt;</code> and declare the <code>kprobe</code> struct: (see it in place <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/7e063f7d7da9190622f488b0e0345c0e57436586/3_RootkitTechniques/3.3_set_root/ftrace_helper.h#L17">here</a>):</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#if LINUX_VERSION_CODE &gt;= KERNEL_VERSION(5,7,0)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#if LINUX_VERSION_CODE &gt;= KERNEL_VERSION(5,7,0)
 </span><span style="color:#75715e">#define KPROBE_LOOKUP 1
 </span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/kprobes.h&gt;</span><span style="color:#75715e">
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">struct</span> kprobe kp <span style="color:#f92672">=</span> {
@@ -274,7 +274,7 @@ kaddr <span style="color:#f92672">&amp;=</span> <span style="color:#ae81ff">0xff
 };
 <span style="color:#75715e">#endif
 </span></code></pre></div><p>With that in-place, before we attempt to use <code>kallsyms_lookup_name()</code>, we just add the following snippet. All that needs to be done is register the kprobe, assign the <code>.addr</code> field to a symbol called <code>kallsyms_lookup_name</code> (after appropriately casting it), and then unregister the kprobe once we&rsquo;re done (see it in place <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/7e063f7d7da9190622f488b0e0345c0e57436586/3_RootkitTechniques/3.3_set_root/ftrace_helper.h#L70">here</a>).</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#ifdef KPROBE_LOOKUP
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#ifdef KPROBE_LOOKUP
 </span><span style="color:#75715e"></span>    <span style="color:#75715e">/* typedef for kallsyms_lookup_name() so we can easily cast kp.addr */</span>
     <span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">unsigned</span> <span style="color:#a6e22e">long</span> (<span style="color:#f92672">*</span>kallsyms_lookup_name_t)(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>name);
     kallsyms_lookup_name_t kallsyms_lookup_name;
@@ -306,6 +306,13 @@ kaddr <span style="color:#f92672">&amp;=</span> <span style="color:#ae81ff">0xff
         <hr />
     </div>
     <div class="pagination__buttons">
+        
+        <span class="button previous">
+            <a href="/posts/bggp21/">
+                <span class="button__icon">←</span>
+                <span class="button__text">Janus: A Polyglot Binary for BGGP 2021</span>
+            </a>
+        </span>
         
         
         <span class="button next">
