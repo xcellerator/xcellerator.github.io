@@ -7,14 +7,15 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Mon, 11 Jan 2021 17:00:00 +0000</lastBuildDate><atom:link href="/tags/kernel/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 19 Nov 2020 12:00:00 +0000</lastBuildDate><atom:link href="/tags/kernel/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Linux Rootkits: New Methods for Kernel 5.7&#43;</title>
-      <link>/posts/linux_rootkits_11/</link>
-      <pubDate>Mon, 11 Jan 2021 17:00:00 +0000</pubDate>
+      <title>Exploring Kernel ASLR in Linux</title>
+      <link>/posts/distro_kaslr/</link>
+      <pubDate>Thu, 19 Nov 2020 12:00:00 +0000</pubDate>
       
-      <guid>/posts/linux_rootkits_11/</guid>
-      <description>What&amp;rsquo;s Going On? Back in February 2020, there were some stirrings on the LKML about unexporting kallsyms_lookup_name() from the kernel. The main reason for this is that unscrupulous module developers will often simply add MODULE_LICENSE(&#39;GPL&#39;) to their code (without actually licensing their module as such). Then, using kallsyms_lookup_name(), they can use any other exported kernel function to their heart&amp;rsquo;s content. The kernel developers don&amp;rsquo;t like this because it enables out-of-tree modules to call non-exported functions.</description>
+      <guid>/posts/distro_kaslr/</guid>
+      <description>Why bother with kernel ASLR? I&amp;rsquo;ve been spending a lot of time looking at Linux kernel exploitation techniques - in particular how kernel ASLR, SMAP, SMEP and Page Table Isolation put hurdles in the way of compromise. Everyone reading this has probably heard of ASLR, or Address Space Layout Randomization. Ultimately, it&amp;rsquo;s goal is to make memory addresses of useful objects unpredictable so that an exploit can&amp;rsquo;t hardcode anything.
+Where it get&amp;rsquo;s interesting is when ASLR is applied to the kernel (often called kASLR).</description>
     </item>
     
   </channel>

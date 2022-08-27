@@ -3,21 +3,24 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>/categories/</loc>
-    <lastmod>2021-09-16T12:00:00+01:00</lastmod>
-  </url><url>
-    <loc>/posts/bggp21/</loc>
-    <lastmod>2021-09-16T12:00:00+01:00</lastmod>
+    <lastmod>2022-08-27T02:00:00+01:00</lastmod>
   </url><url>
     <loc>/categories/other/</loc>
-    <lastmod>2021-09-16T12:00:00+01:00</lastmod>
+    <lastmod>2022-08-27T02:00:00+01:00</lastmod>
   </url><url>
     <loc>/posts/</loc>
-    <lastmod>2021-09-16T12:00:00+01:00</lastmod>
+    <lastmod>2022-08-27T02:00:00+01:00</lastmod>
   </url><url>
     <loc>/categories/reverse_engineering/</loc>
-    <lastmod>2021-09-16T12:00:00+01:00</lastmod>
+    <lastmod>2022-08-27T02:00:00+01:00</lastmod>
+  </url><url>
+    <loc>/posts/tetsuji/</loc>
+    <lastmod>2022-08-27T02:00:00+01:00</lastmod>
   </url><url>
     <loc>/</loc>
+    <lastmod>2022-08-27T02:00:00+01:00</lastmod>
+  </url><url>
+    <loc>/posts/bggp21/</loc>
     <lastmod>2021-09-16T12:00:00+01:00</lastmod>
   </url><url>
     <loc>/tags/kernel-5.7/</loc>

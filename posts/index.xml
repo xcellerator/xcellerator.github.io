@@ -7,7 +7,17 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Thu, 16 Sep 2021 12:00:00 +0100</lastBuildDate><atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 27 Aug 2022 02:00:00 +0100</lastBuildDate><atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Tetsuji: Remote Code Execution on a GameBoy Colour 22 Years Later</title>
+      <link>/posts/tetsuji/</link>
+      <pubDate>Sat, 27 Aug 2022 02:00:00 +0100</pubDate>
+      
+      <guid>/posts/tetsuji/</guid>
+      <description>Introduction It&amp;rsquo;s that time of year again - the Binary Golf Grand Prix is back for a third year running! You can also check out my entries to the first and second times this amazing competition ran.
+The theme this year was to produce a binary that crashes a given program. Bonus points for hijacking execution, and submitting a patch to the project that fixes the vulnerability. Coinciding with the announcement of this year&amp;rsquo;s competition, @netspooky told me about a little-known accessory for the GameBoy/GameBoy Colour/GameBoy Advance called the Mobile Adapter GB, which let players connect their console to the internet via their mobile phone.</description>
+    </item>
+    
     <item>
       <title>Janus: A Polyglot Binary for BGGP 2021</title>
       <link>/posts/bggp21/</link>
@@ -162,7 +172,7 @@ In the FreeBSD world, you can find Joseph Kong&amp;rsquo;s amazing book Designin
       
       <guid>/posts/bggp/</guid>
       <description>You can find the git repo with the finished submission here: BootNoodle
- A few days ago (as of writing), @netspooky announced the first (hopefully annual!) Binary Golf Grand Prix on Twitter. The objective was to create a binary of any sort that is the same forwards as it is byte-reversed, but with an emphasis on creating as small a binary as possible, hence golfing.
+A few days ago (as of writing), @netspooky announced the first (hopefully annual!) Binary Golf Grand Prix on Twitter. The objective was to create a binary of any sort that is the same forwards as it is byte-reversed, but with an emphasis on creating as small a binary as possible, hence golfing.
 This was one of those challenges where I thought that I had no chance of even creating a qualifying submission, so it&amp;rsquo;s better to just wait for the results and admire the work of everyone else.</description>
     </item>
     

