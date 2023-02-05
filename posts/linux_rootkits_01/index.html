@@ -195,24 +195,24 @@ vagrant ssh
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/module.h&gt;</span><span style="color:#75715e">
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/kernel.h&gt;</span><span style="color:#75715e">
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>MODULE_LICENSE(<span style="color:#e6db74">&#34;GPL&#34;</span>);
-</span></span><span style="display:flex;"><span>MODULE_AUTHOR(<span style="color:#e6db74">&#34;TheXcellerator&#34;</span>);
-</span></span><span style="display:flex;"><span>MODULE_DESCRIPTION(<span style="color:#e6db74">&#34;Basic Kernel Module&#34;</span>);
-</span></span><span style="display:flex;"><span>MODULE_VERSION(<span style="color:#e6db74">&#34;0.01&#34;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">MODULE_LICENSE</span>(<span style="color:#e6db74">&#34;GPL&#34;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">MODULE_AUTHOR</span>(<span style="color:#e6db74">&#34;TheXcellerator&#34;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">MODULE_DESCRIPTION</span>(<span style="color:#e6db74">&#34;Basic Kernel Module&#34;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">MODULE_VERSION</span>(<span style="color:#e6db74">&#34;0.01&#34;</span>);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> __init <span style="color:#a6e22e">example_init</span>(<span style="color:#66d9ef">void</span>)
 </span></span><span style="display:flex;"><span>{
-</span></span><span style="display:flex;"><span>    printk(KERN_INFO <span style="color:#e6db74">&#34;Hello, world!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printk</span>(KERN_INFO <span style="color:#e6db74">&#34;Hello, world!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
 </span></span><span style="display:flex;"><span>}
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> __exit <span style="color:#a6e22e">example_exit</span>(<span style="color:#66d9ef">void</span>)
 </span></span><span style="display:flex;"><span>{
-</span></span><span style="display:flex;"><span>    printk(KERN_INFO <span style="color:#e6db74">&#34;Goodbye, world!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printk</span>(KERN_INFO <span style="color:#e6db74">&#34;Goodbye, world!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
 </span></span><span style="display:flex;"><span>}
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>module_init(example_init);
-</span></span><span style="display:flex;"><span>module_exit(example_exit);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">module_init</span>(example_init);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">module_exit</span>(example_exit);
 </span></span></code></pre></div><p>This is about as simple as a kernel module can be - and we&rsquo;re going to go through it line-by-line.</p>
 <p>First off, we have a couple of <code>#include</code>&rsquo;s that will always be required, followed up by a few macros that bake in some details about the what the module does. This information is made availabe by the kernel when we load the module into memory later on.</p>
 <p>Next we have two very important functions that will <em>always be present</em>. The <code>example_init</code> function is executed once the module is loaded, and <code>example_exit</code> when it is unloaded. The final two lines declare to the compiler the roles that <code>example_init</code> and <code>example_exit</code> have. (You can name these two functions whatever you want as long as you keep <code>__init</code> and <code>__exit</code> in their declarations and change those final two lines).</p>
@@ -288,6 +288,21 @@ vagrant ssh
 
 <script src="/assets/main.js"></script>
 <script src="/assets/prism.js"></script>
+
+<div class="footer__webring">
+    <span>
+        <div>
+            this site is part of the <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi'>HauNTed wEbriNg</a>
+        </div>
+        <div>
+            <p>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?before=https://xcellerator.github.io/'>&lt;&lt;&lt;</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?random=https://xcellerator.github.io/'>RaNDom</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?after=https://xcellerator.github.io/'>&gt;&gt;&gt;</a>
+            </p>
+        </div>
+    </span>
+</div>
 
 
 

