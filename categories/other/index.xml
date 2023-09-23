@@ -5,9 +5,19 @@
     <link>/categories/other/</link>
     <description>Recent content in other on TheXcellerator</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en-us</language>
+    <language>en</language>
     <copyright>Harvey Phillips 2020 - London, England</copyright>
-    <lastBuildDate>Sat, 27 Aug 2022 02:00:00 +0100</lastBuildDate><atom:link href="/categories/other/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 23 Sep 2023 12:00:00 +0100</lastBuildDate><atom:link href="/categories/other/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>BGGP 4: How Low Can You Go?</title>
+      <link>/posts/bggp4/</link>
+      <pubDate>Sat, 23 Sep 2023 12:00:00 +0100</pubDate>
+      
+      <guid>/posts/bggp4/</guid>
+      <description>Guess who&amp;rsquo;s back? The Binary Golf Grand Prix is back for it&amp;rsquo;s fourth annual outing! Sadly, after getting nerdsniped last year by the one and only @netspooky, I ended up not submitting an entry for last year&amp;rsquo;s competition (you can see what I got up to instead here).
+This year, the theme was self replication. To avoid being sent active virii, the Binary Golf Association required that the entry created only a single copy of itself, and did not re-execute itself.</description>
+    </item>
+    
     <item>
       <title>Tetsuji: Remote Code Execution on a GameBoy Colour 22 Years Later</title>
       <link>/posts/tetsuji/</link>

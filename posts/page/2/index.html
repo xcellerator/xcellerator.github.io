@@ -146,6 +146,50 @@
   
   <div class="post on-list">
     <h1 class="post-title">
+      <a href="/posts/linux_rootkits_06/">Linux Rootkits Part 6: Hiding Directories</a></h1>
+    <div class="post-meta">
+      <span class="post-date">
+        2020-09-19
+      </span>
+      <span class="post-author">::
+        TheXcellerator</span>
+    </div>
+
+    
+    <span class="post-tags">
+      
+      #<a href="/tags/linux/">linux</a>&nbsp;
+      
+      #<a href="/tags/rootkit/">rootkit</a>&nbsp;
+      
+      #<a href="/tags/stealth/">stealth</a>&nbsp;
+      
+      #<a href="/tags/directories/">directories</a>&nbsp;
+      
+    </span>
+    
+
+    
+
+    <div class="post-content">
+      
+      
+      At this point, we’ve used several different techniques to manipulate the kernel into doing interesting things. We’re going to combine a few of these techniques now in order to hide certain files and directories from userspace. This post is probably the most intricate yet due to the fact that we have to manipulate the structure returned by the kernel to userspace.
+Roughly speaking, directory listing is handled by the syscall sys_getdents64 and its 32-bit counterpart sys_getdents (we’ll want to hook both, but they are identical except for a small addition in the 32-bit version).
+      
+      
+    </div>
+
+    
+    <div>
+      <a class="read-more button"
+        href="/posts/linux_rootkits_06/">Read more →</a>
+    </div>
+    
+  </div>
+  
+  <div class="post on-list">
+    <h1 class="post-title">
       <a href="/posts/linux_rootkits_05/">Linux Rootkits Part 5: Hiding Kernel Modules from Userspace</a></h1>
     <div class="post-meta">
       <span class="post-date">
